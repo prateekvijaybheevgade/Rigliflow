@@ -192,7 +192,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
     : [];
 
   return (
-    <aside className="w-72 border-l border-slate-200/90 bg-white flex flex-col h-[calc(100vh-3.5rem)] select-none shrink-0 z-20 text-xs shadow-xs overflow-hidden">
+    <aside className="w-full lg:w-72 border-l border-slate-200/90 bg-white flex flex-col h-full select-none shrink-0 z-20 text-xs shadow-xs overflow-hidden">
       {/* 1. MULTI-SELECTION ARRANGE INSPECTOR */}
       {isMultiSelect && (
         <div className="flex-1 overflow-y-auto p-4 space-y-4">

@@ -233,7 +233,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [activeCategory, search]);
 
   return (
-    <aside className="w-60 border-r border-slate-200/90 bg-white flex flex-col h-[calc(100vh-3.5rem)] select-none shrink-0 z-20 shadow-[1px_0_2px_rgba(0,0,0,0.02)]">
+    <aside className="w-full lg:w-60 border-r border-slate-200/90 bg-white flex flex-col h-full select-none shrink-0 z-20 shadow-[1px_0_2px_rgba(0,0,0,0.02)]">
       {/* Studio Quick Action */}
       <div className="p-2.5 border-b border-slate-100 bg-slate-50/50">
         <button

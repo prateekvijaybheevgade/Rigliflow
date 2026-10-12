@@ -1,15 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FlowNode, PortPosition, Point } from '../types/flowchart';
 import * as LucideIcons from 'lucide-react';
-import { MessageSquare, Lock } from 'lucide-react';
+import { MessageSquare, Lock, Pencil, Copy, Trash2, Sliders, Check } from 'lucide-react';
 
 interface NodeComponentProps {
   node: FlowNode;
   isSelected: boolean;
   onSelect: (nodeId: string, multi: boolean) => void;
   onDragStart: (e: React.MouseEvent, node: FlowNode) => void;
+  onTouchDragStart?: (e: React.TouchEvent, node: FlowNode) => void;
+  onResizeStart?: (
+    e: React.MouseEvent | React.TouchEvent,
+    handle: 'nw' | 'ne' | 'se' | 'sw',
+    node: FlowNode
+  ) => void;
   onPortMouseDown: (e: React.MouseEvent, nodeId: string, port: PortPosition) => void;
+  onPortTouchStart?: (e: React.TouchEvent, nodeId: string, port: PortPosition) => void;
   onUpdateText: (nodeId: string, label: string, sublabel?: string) => void;
+  onDuplicateNode?: (nodeId: string) => void;
+  onDeleteNode?: (nodeId: string) => void;
+  onOpenProperties?: (nodeId: string) => void;
   zoom: number;
   commentCount?: number;
   hasUnresolvedComments?: boolean;
@@ -21,8 +31,14 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
   isSelected,
   onSelect,
   onDragStart,
+  onTouchDragStart,
+  onResizeStart,
   onPortMouseDown,
+  onPortTouchStart,
   onUpdateText,
+  onDuplicateNode,
+  onDeleteNode,
+  onOpenProperties,
   zoom,
   commentCount,
   hasUnresolvedComments,
@@ -32,6 +48,7 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
   const [labelVal, setLabelVal] = useState(node.label);
   const [sublabelVal, setSublabelVal] = useState(node.sublabel || '');
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastTouchTimeRef = useRef<number>(0);
 
   useEffect(() => {
     setLabelVal(node.label);
@@ -57,6 +74,25 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
       setIsEditing(false);
       setLabelVal(node.label);
       setSublabelVal(node.sublabel || '');
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (isEditing) return;
+    const now = Date.now();
+    const timeSinceLastTap = now - lastTouchTimeRef.current;
+    lastTouchTimeRef.current = now;
+
+    if (timeSinceLastTap < 320 && !node.isLocked) {
+      e.stopPropagation();
+      e.preventDefault();
+      setIsEditing(true);
+      return;
+    }
+
+    onSelect(node.id, false);
+    if (!node.isLocked && onTouchDragStart) {
+      onTouchDragStart(e, node);
     }
   };
 
@@ -105,13 +141,13 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
   const getPortStyle = (port: PortPosition): React.CSSProperties => {
     switch (port) {
       case 'top':
-        return { top: -6, left: '50%', transform: 'translateX(-50%)' };
+        return { top: -7, left: '50%', transform: 'translateX(-50%)' };
       case 'right':
-        return { top: '50%', right: -6, transform: 'translateY(-50%)' };
+        return { top: '50%', right: -7, transform: 'translateY(-50%)' };
       case 'bottom':
-        return { bottom: -6, left: '50%', transform: 'translateX(-50%)' };
+        return { bottom: -7, left: '50%', transform: 'translateX(-50%)' };
       case 'left':
-        return { top: '50%', left: -6, transform: 'translateY(-50%)' };
+        return { top: '50%', left: -7, transform: 'translateY(-50%)' };
     }
   };
 
@@ -143,6 +179,7 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
         width: w,
         height: h,
         opacity: nodeOpacity,
+        touchAction: 'none',
       }}
       onMouseDown={(e) => {
         if (isEditing) return;
@@ -154,6 +191,7 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
           }
         }
       }}
+      onTouchStart={handleTouchStart}
       onDoubleClick={(e) => {
         if (node.isLocked) return;
         e.stopPropagation();
@@ -320,6 +358,7 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
             />
             <line x1={w / 2} y1={h * 0.37} x2={w / 2} y2={h * 0.72} stroke={borderColor} strokeWidth={strokeWidth} />
             <line x1={w * 0.2} y1={h * 0.5} x2={w * 0.8} y2={h * 0.5} stroke={borderColor} strokeWidth={strokeWidth} />
+            <line x1={w * 0.2} y1={h * 0.5} x2={w * 0.8} y2={h * 0.5} stroke={borderColor} strokeWidth={strokeWidth} />
             <line x1={w / 2} y1={h * 0.72} x2={w * 0.28} y2={h - 4} stroke={borderColor} strokeWidth={strokeWidth} />
             <line x1={w / 2} y1={h * 0.72} x2={w * 0.72} y2={h - 4} stroke={borderColor} strokeWidth={strokeWidth} />
           </g>
@@ -480,6 +519,123 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
         )}
       </svg>
 
+      {/* Floating Quick Action Pill for Touch & Quick Edit (When Selected) */}
+      {isSelected && !isEditing && (
+        <div
+          className="absolute -top-11 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 bg-slate-900/95 text-white px-2 py-1 rounded-full shadow-xl border border-slate-700/80 backdrop-blur-md text-xs pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+        >
+          {!node.isLocked && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full hover:bg-slate-800 text-[11px] font-semibold text-blue-300 hover:text-white transition-colors cursor-pointer"
+              title="Edit Text (Tap or Double-tap)"
+            >
+              <Pencil size={11} />
+              <span>Edit</span>
+            </button>
+          )}
+          {onDuplicateNode && !node.isLocked && (
+            <button
+              onClick={() => onDuplicateNode(node.id)}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-full hover:bg-slate-800 text-[11px] text-slate-300 hover:text-white transition-colors cursor-pointer"
+              title="Duplicate"
+            >
+              <Copy size={11} />
+            </button>
+          )}
+          {onOpenProperties && (
+            <button
+              onClick={() => onOpenProperties(node.id)}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-full hover:bg-slate-800 text-[11px] text-slate-300 hover:text-white transition-colors cursor-pointer"
+              title="Inspect / Style"
+            >
+              <Sliders size={11} />
+            </button>
+          )}
+          {onDeleteNode && !node.isLocked && (
+            <button
+              onClick={() => onDeleteNode(node.id)}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-full hover:bg-rose-950 text-[11px] text-rose-300 hover:text-rose-200 transition-colors cursor-pointer"
+              title="Delete"
+            >
+              <Trash2 size={11} />
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 4 Interactive Corner Resizing Handles (NW, NE, SE, SW) */}
+      {isSelected && !node.isLocked && !isEditing && (
+        <>
+          {/* Top-Left Handle (NW) */}
+          <div
+            className="absolute -top-3 -left-3 w-7 h-7 flex items-center justify-center cursor-nwse-resize z-45"
+            title="Resize (Top-Left)"
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onResizeStart?.(e, 'nw', node);
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              onResizeStart?.(e, 'nw', node);
+            }}
+          >
+            <div className="w-2.5 h-2.5 rounded-full bg-white border-2 border-blue-600 shadow-sm transition-transform hover:scale-125" />
+          </div>
+
+          {/* Top-Right Handle (NE) */}
+          <div
+            className="absolute -top-3 -right-3 w-7 h-7 flex items-center justify-center cursor-nesw-resize z-45"
+            title="Resize (Top-Right)"
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onResizeStart?.(e, 'ne', node);
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              onResizeStart?.(e, 'ne', node);
+            }}
+          >
+            <div className="w-2.5 h-2.5 rounded-full bg-white border-2 border-blue-600 shadow-sm transition-transform hover:scale-125" />
+          </div>
+
+          {/* Bottom-Right Handle (SE) */}
+          <div
+            className="absolute -bottom-3 -right-3 w-7 h-7 flex items-center justify-center cursor-nwse-resize z-45"
+            title="Resize (Bottom-Right)"
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onResizeStart?.(e, 'se', node);
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              onResizeStart?.(e, 'se', node);
+            }}
+          >
+            <div className="w-2.5 h-2.5 rounded-full bg-white border-2 border-blue-600 shadow-sm transition-transform hover:scale-125" />
+          </div>
+
+          {/* Bottom-Left Handle (SW) */}
+          <div
+            className="absolute -bottom-3 -left-3 w-7 h-7 flex items-center justify-center cursor-nesw-resize z-45"
+            title="Resize (Bottom-Left)"
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              onResizeStart?.(e, 'sw', node);
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              onResizeStart?.(e, 'sw', node);
+            }}
+          >
+            <div className="w-2.5 h-2.5 rounded-full bg-white border-2 border-blue-600 shadow-sm transition-transform hover:scale-125" />
+          </div>
+        </>
+      )}
+
       {/* Node Content */}
       <div
         className="relative w-full h-full flex flex-col items-center justify-center px-3.5 py-2 pointer-events-none"
@@ -495,9 +651,12 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
       >
         {isEditing ? (
           <div
-            className="pointer-events-auto flex flex-col gap-1 w-full bg-white/95 backdrop-blur p-2 rounded shadow-lg border border-blue-400 z-50"
+            className="pointer-events-auto flex flex-col gap-1.5 w-[calc(100%+16px)] -mx-2 bg-white/98 backdrop-blur-md p-2.5 rounded-xl shadow-2xl border-2 border-blue-500 z-50 animate-in fade-in zoom-in-95 duration-100"
             onClick={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.stopPropagation()}
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
           >
             <input
               ref={inputRef}
@@ -505,7 +664,7 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
               value={labelVal}
               onChange={(e) => setLabelVal(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="text-xs font-semibold px-1.5 py-0.5 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800"
+              className="text-xs font-bold px-2 py-1 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 bg-slate-50 focus:bg-white"
               placeholder="Primary Label"
             />
             <input
@@ -513,15 +672,20 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
               value={sublabelVal}
               onChange={(e) => setSublabelVal(e.target.value)}
               onKeyDown={handleKeyDown}
-              className="text-[10px] px-1.5 py-0.5 border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-600"
+              className="text-[11px] px-2 py-1 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 bg-slate-50 focus:bg-white"
               placeholder="Subtitle / detail (optional)"
             />
-            <button
-              onClick={handleFinishEditing}
-              className="mt-1 text-[10px] bg-blue-600 hover:bg-blue-700 text-white font-medium py-0.5 px-2 rounded self-end cursor-pointer"
-            >
-              Done
-            </button>
+            <div className="flex items-center justify-between mt-0.5 pt-1 border-t border-slate-100">
+              <span className="text-[10px] text-slate-400">Press Enter or Done</span>
+              <button
+                type="button"
+                onClick={handleFinishEditing}
+                className="text-[11px] bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-1 px-3 rounded-lg cursor-pointer shadow-sm flex items-center gap-1"
+              >
+                <Check size={12} />
+                <span>Done</span>
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -594,7 +758,11 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
         ports.map((port) => (
           <div
             key={port}
-            className="absolute w-3.5 h-3.5 rounded-full bg-white border-2 border-blue-500 cursor-crosshair opacity-0 group-hover:opacity-100 hover:scale-125 transition-all shadow-sm z-40"
+            className={`absolute w-3.5 h-3.5 rounded-full bg-white border-2 border-blue-500 cursor-crosshair transition-all shadow-sm z-40 ${
+              isSelected
+                ? 'opacity-100 scale-110 ring-2 ring-blue-400/40'
+                : 'opacity-0 group-hover:opacity-100 hover:scale-125'
+            }`}
             style={getPortStyle(port)}
             title={`Connect from ${port}`}
             onMouseDown={(e) => {
@@ -602,7 +770,14 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
               e.preventDefault();
               onPortMouseDown(e, node.id, port);
             }}
-          />
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              onPortTouchStart?.(e, node.id, port);
+            }}
+          >
+            {/* Enlarged Touch Hit Area (28px) for Mobile & Tablets */}
+            <div className="absolute -inset-2 bg-transparent rounded-full" />
+          </div>
         ))}
 
       {/* Node Collaboration Comment Badge */}
@@ -641,4 +816,5 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
     </div>
   );
 };
+
 

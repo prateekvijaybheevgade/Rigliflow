@@ -37,6 +37,11 @@ interface CanvasProps {
   onUpdateNodePosition: (nodeId: string, x: number, y: number) => void;
   onBatchUpdateNodePositions: (positions: { id: string; x: number; y: number }[]) => void;
   onUpdateNodeText: (nodeId: string, label: string, sublabel?: string) => void;
+  onUpdateNodeDimensions?: (nodeId: string, width: number, height: number, x: number, y: number) => void;
+  onDuplicateNode?: (nodeId: string) => void;
+  onDeleteNode?: (nodeId: string) => void;
+  onOpenProperties?: (nodeId: string) => void;
+  onZoomFit?: () => void;
   onAddEdge: (newEdge: Omit<FlowEdge, 'id'>) => void;
   onDeleteEdge: (edgeId: string) => void;
   onUpdateEdgeLabel: (edgeId: string, label: string) => void;
@@ -74,6 +79,11 @@ export const Canvas: React.FC<CanvasProps> = ({
   onUpdateNodePosition,
   onBatchUpdateNodePositions,
   onUpdateNodeText,
+  onUpdateNodeDimensions,
+  onDuplicateNode,
+  onDeleteNode,
+  onOpenProperties,
+  onZoomFit,
   onAddEdge,
   onDeleteEdge,
   onUpdateEdgeLabel,
@@ -105,10 +115,28 @@ export const Canvas: React.FC<CanvasProps> = ({
   const dragStartMousePos = useRef<Point>({ x: 0, y: 0 });
   const initialNodePositions = useRef<{ id: string; x: number; y: number }[]>([]);
 
+  // Interactive Resizing Node state
+  const [resizingNode, setResizingNode] = useState<{
+    nodeId: string;
+    handle: 'nw' | 'ne' | 'se' | 'sw';
+    initialX: number;
+    initialY: number;
+    initialWidth: number;
+    initialHeight: number;
+    startScreenX: number;
+    startScreenY: number;
+  } | null>(null);
+
   // Canvas Panning state
   const [isPanning, setIsPanning] = useState(false);
   const panStartMousePos = useRef<Point>({ x: 0, y: 0 });
   const initialPan = useRef<Point>({ x: 0, y: 0 });
+
+  // Multi-touch pinch-to-zoom tracking
+  const initialPinchDistRef = useRef<number | null>(null);
+  const initialPinchZoomRef = useRef<number>(1);
+  const initialPinchPanRef = useRef<Point>({ x: 0, y: 0 });
+  const initialPinchCenterRef = useRef<Point>({ x: 0, y: 0 });
 
   // Dragging connection wire from a port
   const [draggingPort, setDraggingPort] = useState<DraggingPortState | null>(null);
@@ -125,7 +153,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   const [marqueeStart, setMarqueeStart] = useState<Point | null>(null);
   const [marqueeCurrent, setMarqueeCurrent] = useState<Point | null>(null);
 
-  // Convert client mouse coords to canvas coords
+  // Convert client screen coords to canvas coords
   const screenToCanvas = (screenX: number, screenY: number): Point => {
     if (!containerRef.current) return { x: 0, y: 0 };
     const rect = containerRef.current.getBoundingClientRect();
@@ -135,7 +163,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     };
   };
 
-  // Node Drag Start
+  // Node Drag Start (Mouse)
   const handleNodeDragStart = (e: React.MouseEvent, clickedNode: FlowNode) => {
     e.stopPropagation();
     setIsDraggingNode(true);
@@ -147,6 +175,42 @@ export const Canvas: React.FC<CanvasProps> = ({
     initialNodePositions.current = nodes
       .filter((n) => activeIds.includes(n.id))
       .map((n) => ({ id: n.id, x: n.x, y: n.y }));
+  };
+
+  // Node Drag Start (Touch)
+  const handleNodeTouchDragStart = (e: React.TouchEvent, clickedNode: FlowNode) => {
+    if (e.touches.length !== 1) return;
+    e.stopPropagation();
+    setIsDraggingNode(true);
+    dragStartMousePos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+
+    const isAlreadySelected = selectedNodeIds.includes(clickedNode.id);
+    const activeIds = isAlreadySelected ? selectedNodeIds : [clickedNode.id];
+
+    initialNodePositions.current = nodes
+      .filter((n) => activeIds.includes(n.id))
+      .map((n) => ({ id: n.id, x: n.x, y: n.y }));
+  };
+
+  // Node Resize Start (Mouse or Touch)
+  const handleNodeResizeStart = (
+    e: React.MouseEvent | React.TouchEvent,
+    handle: 'nw' | 'ne' | 'se' | 'sw',
+    node: FlowNode
+  ) => {
+    e.stopPropagation();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    setResizingNode({
+      nodeId: node.id,
+      handle,
+      initialX: node.x,
+      initialY: node.y,
+      initialWidth: node.width,
+      initialHeight: node.height,
+      startScreenX: clientX,
+      startScreenY: clientY,
+    });
   };
 
   // Port Mouse Down (Start connecting)
@@ -163,10 +227,72 @@ export const Canvas: React.FC<CanvasProps> = ({
     });
   };
 
-  // Global mouse move
+  // Port Touch Start (Start connecting on mobile/tablet)
+  const handlePortTouchStart = (e: React.TouchEvent, nodeId: string, port: PortPosition) => {
+    if (e.touches.length !== 1) return;
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) return;
+
+    const startPoint = getPortCoordinates(node, port);
+    setDraggingPort({
+      nodeId,
+      port,
+      startPoint,
+      currentPoint: startPoint,
+    });
+  };
+
+  // Helper: Apply Resize calculations
+  const applyResize = (dx: number, dy: number) => {
+    if (!resizingNode || !onUpdateNodeDimensions) return;
+    let newWidth = resizingNode.initialWidth;
+    let newHeight = resizingNode.initialHeight;
+    let newX = resizingNode.initialX;
+    let newY = resizingNode.initialY;
+
+    const minW = 80;
+    const minH = 45;
+
+    if (resizingNode.handle === 'se') {
+      newWidth = Math.max(minW, resizingNode.initialWidth + dx);
+      newHeight = Math.max(minH, resizingNode.initialHeight + dy);
+    } else if (resizingNode.handle === 'sw') {
+      newWidth = Math.max(minW, resizingNode.initialWidth - dx);
+      newX = resizingNode.initialX + (resizingNode.initialWidth - newWidth);
+      newHeight = Math.max(minH, resizingNode.initialHeight + dy);
+    } else if (resizingNode.handle === 'ne') {
+      newWidth = Math.max(minW, resizingNode.initialWidth + dx);
+      newHeight = Math.max(minH, resizingNode.initialHeight - dy);
+      newY = resizingNode.initialY + (resizingNode.initialHeight - newHeight);
+    } else if (resizingNode.handle === 'nw') {
+      newWidth = Math.max(minW, resizingNode.initialWidth - dx);
+      newX = resizingNode.initialX + (resizingNode.initialWidth - newWidth);
+      newHeight = Math.max(minH, resizingNode.initialHeight - dy);
+      newY = resizingNode.initialY + (resizingNode.initialHeight - newHeight);
+    }
+
+    if (snapToGrid) {
+      newWidth = Math.round(newWidth / gridSize) * gridSize;
+      newHeight = Math.round(newHeight / gridSize) * gridSize;
+      newX = Math.round(newX / gridSize) * gridSize;
+      newY = Math.round(newY / gridSize) * gridSize;
+    }
+
+    onUpdateNodeDimensions(resizingNode.nodeId, newWidth, newHeight, newX, newY);
+  };
+
+  // Global mouse and touch event listeners
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      // 1. Panning canvas
+      // 1. Resizing Node
+      if (resizingNode) {
+        const dx = (e.clientX - resizingNode.startScreenX) / zoom;
+        const dy = (e.clientY - resizingNode.startScreenY) / zoom;
+        applyResize(dx, dy);
+        return;
+      }
+
+      // 2. Panning canvas
       if (isPanning) {
         const dx = e.clientX - panStartMousePos.current.x;
         const dy = e.clientY - panStartMousePos.current.y;
@@ -177,14 +303,14 @@ export const Canvas: React.FC<CanvasProps> = ({
         return;
       }
 
-      // 2. Marquee selection
+      // 3. Marquee selection
       if (marqueeStart) {
         const canvasPos = screenToCanvas(e.clientX, e.clientY);
         setMarqueeCurrent(canvasPos);
         return;
       }
 
-      // 3. Dragging Nodes
+      // 4. Dragging Nodes
       if (isDraggingNode && initialNodePositions.current.length > 0) {
         const dx = (e.clientX - dragStartMousePos.current.x) / zoom;
         const dy = (e.clientY - dragStartMousePos.current.y) / zoom;
@@ -205,7 +331,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         return;
       }
 
-      // 4. Dragging Port Connection Wire
+      // 5. Dragging Port Connection Wire
       if (draggingPort) {
         const canvasPos = screenToCanvas(e.clientX, e.clientY);
         setDraggingPort((prev) => (prev ? { ...prev, currentPoint: canvasPos } : null));
@@ -223,6 +349,10 @@ export const Canvas: React.FC<CanvasProps> = ({
     };
 
     const handleMouseUp = (e: MouseEvent) => {
+      if (resizingNode) {
+        setResizingNode(null);
+      }
+
       if (isPanning) {
         setIsPanning(false);
       }
@@ -297,16 +427,169 @@ export const Canvas: React.FC<CanvasProps> = ({
       }
     };
 
+    // Touch Move Handler
+    const handleTouchMove = (e: TouchEvent) => {
+      // Pinch to Zoom (2 fingers)
+      if (e.touches.length === 2 && initialPinchDistRef.current && initialPinchDistRef.current > 0) {
+        e.preventDefault();
+        const t1 = e.touches[0];
+        const t2 = e.touches[1];
+        const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+        const scaleFactor = currentDist / initialPinchDistRef.current;
+        const newZoom = Math.min(2.5, Math.max(0.25, initialPinchZoomRef.current * scaleFactor));
+
+        const centerX = initialPinchCenterRef.current.x;
+        const centerY = initialPinchCenterRef.current.y;
+        const newPanX = centerX - (centerX - initialPinchPanRef.current.x) * (newZoom / initialPinchZoomRef.current);
+        const newPanY = centerY - (centerY - initialPinchPanRef.current.y) * (newZoom / initialPinchZoomRef.current);
+
+        onZoomChange(newZoom);
+        onPanChange({ x: newPanX, y: newPanY });
+        return;
+      }
+
+      // Single Touch Gestures
+      if (e.touches.length === 1) {
+        const touch = e.touches[0];
+
+        // 1. Resizing Node on Touch
+        if (resizingNode) {
+          e.preventDefault();
+          const dx = (touch.clientX - resizingNode.startScreenX) / zoom;
+          const dy = (touch.clientY - resizingNode.startScreenY) / zoom;
+          applyResize(dx, dy);
+          return;
+        }
+
+        // 2. Panning Canvas on Touch
+        if (isPanning) {
+          e.preventDefault();
+          const dx = touch.clientX - panStartMousePos.current.x;
+          const dy = touch.clientY - panStartMousePos.current.y;
+          onPanChange({
+            x: initialPan.current.x + dx,
+            y: initialPan.current.y + dy,
+          });
+          return;
+        }
+
+        // 3. Dragging Nodes on Touch
+        if (isDraggingNode && initialNodePositions.current.length > 0) {
+          e.preventDefault();
+          const dx = (touch.clientX - dragStartMousePos.current.x) / zoom;
+          const dy = (touch.clientY - dragStartMousePos.current.y) / zoom;
+
+          const updatedPositions = initialNodePositions.current.map((initial) => {
+            let newX = initial.x + dx;
+            let newY = initial.y + dy;
+
+            if (snapToGrid) {
+              newX = Math.round(newX / gridSize) * gridSize;
+              newY = Math.round(newY / gridSize) * gridSize;
+            }
+
+            return { id: initial.id, x: newX, y: newY };
+          });
+
+          onBatchUpdateNodePositions(updatedPositions);
+          return;
+        }
+
+        // 4. Dragging Port Connection Wire on Touch
+        if (draggingPort) {
+          e.preventDefault();
+          const canvasPos = screenToCanvas(touch.clientX, touch.clientY);
+          setDraggingPort((prev) => (prev ? { ...prev, currentPoint: canvasPos } : null));
+
+          const targetNode = nodes.find(
+            (n) =>
+              n.id !== draggingPort.nodeId &&
+              canvasPos.x >= n.x &&
+              canvasPos.x <= n.x + n.width &&
+              canvasPos.y >= n.y &&
+              canvasPos.y <= n.y + n.height
+          );
+          setHoveredTargetNodeId(targetNode ? targetNode.id : null);
+        }
+      }
+    };
+
+    // Touch End Handler
+    const handleTouchEnd = (e: TouchEvent) => {
+      initialPinchDistRef.current = null;
+
+      if (resizingNode) {
+        setResizingNode(null);
+      }
+
+      if (isPanning) {
+        setIsPanning(false);
+      }
+
+      if (isDraggingNode) {
+        setIsDraggingNode(false);
+      }
+
+      if (draggingPort) {
+        // Complete wire connection using last known touch location
+        const lastPoint = draggingPort.currentPoint;
+        const targetNode = nodes.find(
+          (n) =>
+            n.id !== draggingPort.nodeId &&
+            lastPoint.x >= n.x - 24 &&
+            lastPoint.x <= n.x + n.width + 24 &&
+            lastPoint.y >= n.y - 24 &&
+            lastPoint.y <= n.y + n.height + 24
+        );
+
+        if (targetNode) {
+          const sourceNode = nodes.find((n) => n.id === draggingPort.nodeId);
+          let toPort: PortPosition = 'top';
+
+          if (sourceNode) {
+            const dx = targetNode.x + targetNode.width / 2 - (sourceNode.x + sourceNode.width / 2);
+            const dy = targetNode.y + targetNode.height / 2 - (sourceNode.y + sourceNode.height / 2);
+
+            if (Math.abs(dx) > Math.abs(dy)) {
+              toPort = dx > 0 ? 'left' : 'right';
+            } else {
+              toPort = dy > 0 ? 'top' : 'bottom';
+            }
+          }
+
+          onAddEdge({
+            from: draggingPort.nodeId,
+            to: targetNode.id,
+            fromPort: draggingPort.port,
+            toPort,
+            curveType: 'orthogonal',
+            style: 'solid',
+            color: '#64748B',
+          });
+        }
+
+        setDraggingPort(null);
+        setHoveredTargetNodeId(null);
+      }
+    };
+
     window.addEventListener('mousemove', handleMouseMove);
     window.addEventListener('mouseup', handleMouseUp);
+    window.addEventListener('touchmove', handleTouchMove, { passive: false });
+    window.addEventListener('touchend', handleTouchEnd);
+    window.addEventListener('touchcancel', handleTouchEnd);
 
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+      window.removeEventListener('touchcancel', handleTouchEnd);
     };
   }, [
     isPanning,
     isDraggingNode,
+    resizingNode,
     draggingPort,
     marqueeStart,
     marqueeCurrent,
@@ -369,6 +652,35 @@ export const Canvas: React.FC<CanvasProps> = ({
     }
   };
 
+  // Canvas Touch Down
+  const handleCanvasTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      onClearSelection();
+      setIsPanning(true);
+      panStartMousePos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+      initialPan.current = { ...pan };
+      initialPinchDistRef.current = null;
+    } else if (e.touches.length === 2) {
+      setIsPanning(false);
+      setIsDraggingNode(false);
+      setResizingNode(null);
+
+      const t1 = e.touches[0];
+      const t2 = e.touches[1];
+      initialPinchDistRef.current = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+      initialPinchZoomRef.current = zoom;
+      initialPinchPanRef.current = { ...pan };
+
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        initialPinchCenterRef.current = {
+          x: (t1.clientX + t2.clientX) / 2 - rect.left,
+          y: (t1.clientY + t2.clientY) / 2 - rect.top,
+        };
+      }
+    }
+  };
+
   // Mini-map click to pan
   const handleMiniMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -394,9 +706,10 @@ export const Canvas: React.FC<CanvasProps> = ({
     <div
       ref={containerRef}
       className="relative w-full h-full overflow-hidden select-none cursor-default"
-      style={{ backgroundColor: canvasBg }}
+      style={{ backgroundColor: canvasBg, touchAction: 'none' }}
       onWheel={handleWheel}
       onMouseDown={handleCanvasMouseDown}
+      onTouchStart={handleCanvasTouchStart}
     >
       {/* Dynamic Grid Background */}
       {gridType !== 'none' && (
@@ -552,8 +865,14 @@ export const Canvas: React.FC<CanvasProps> = ({
             isSelected={selectedNodeIds.includes(node.id)}
             onSelect={onSelectNode}
             onDragStart={handleNodeDragStart}
+            onTouchDragStart={handleNodeTouchDragStart}
+            onResizeStart={handleNodeResizeStart}
             onPortMouseDown={handlePortMouseDown}
+            onPortTouchStart={handlePortTouchStart}
             onUpdateText={onUpdateNodeText}
+            onDuplicateNode={onDuplicateNode}
+            onDeleteNode={onDeleteNode}
+            onOpenProperties={onOpenProperties}
             zoom={zoom}
             commentCount={commentsCountByNodeId ? commentsCountByNodeId[node.id] || 0 : undefined}
             hasUnresolvedComments={
@@ -582,31 +901,40 @@ export const Canvas: React.FC<CanvasProps> = ({
       </div>
 
       {/* Floating Canvas Quick Navigation Bar (Bottom Left) */}
-      <div className="absolute bottom-11 left-3 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-md px-2 py-1.5 rounded-xl border border-slate-200/90 shadow-sm text-xs select-none">
+      <div className="absolute bottom-11 left-3 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-md px-2 py-1.5 rounded-xl border border-slate-200/90 shadow-md text-xs select-none">
         <button
           onClick={() => onZoomChange(Math.max(0.25, zoom - 0.15))}
-          className="p-1 hover:bg-slate-100 rounded text-slate-600 cursor-pointer"
+          className="p-1.5 hover:bg-slate-100 rounded text-slate-600 active:bg-slate-200 transition-colors cursor-pointer"
           title="Zoom Out"
         >
-          <ZoomOut size={13} />
+          <ZoomOut size={14} />
         </button>
         <button
           onClick={() => {
             onZoomChange(1);
             onPanChange({ x: 80, y: 40 });
           }}
-          className="px-1.5 font-bold text-[11px] text-slate-700 hover:bg-slate-100 rounded cursor-pointer"
+          className="px-2 py-1 font-bold text-[11px] text-slate-700 hover:bg-slate-100 rounded active:bg-slate-200 transition-colors cursor-pointer"
           title="Reset to 100%"
         >
           {Math.round(zoom * 100)}%
         </button>
         <button
           onClick={() => onZoomChange(Math.min(2.5, zoom + 0.15))}
-          className="p-1 hover:bg-slate-100 rounded text-slate-600 cursor-pointer"
+          className="p-1.5 hover:bg-slate-100 rounded text-slate-600 active:bg-slate-200 transition-colors cursor-pointer"
           title="Zoom In"
         >
-          <ZoomIn size={13} />
+          <ZoomIn size={14} />
         </button>
+        {onZoomFit && (
+          <button
+            onClick={onZoomFit}
+            className="p-1.5 hover:bg-slate-100 rounded text-slate-600 active:bg-slate-200 transition-colors cursor-pointer ml-0.5 border-l border-slate-200/80"
+            title="Fit to Screen"
+          >
+            <Maximize2 size={13} />
+          </button>
+        )}
       </div>
 
       {/* Floating Mini-Map / Navigator Radar (Bottom Right) */}

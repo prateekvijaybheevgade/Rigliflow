@@ -28,6 +28,7 @@ import {
   ChevronRight,
   Home,
   Layout,
+  Menu,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { UserButton } from '@clerk/react';
@@ -101,6 +102,7 @@ export const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [previewTemplate, setPreviewTemplate] = useState<SampleTemplate | null>(null);
   const [showNewMenu, setShowNewMenu] = useState<boolean>(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState<boolean>(false);
   const searchInputRef = React.useRef<HTMLInputElement>(null);
 
   // Keyboard shortcut listener: press '/' to focus search, 'Escape' to clear
@@ -172,8 +174,20 @@ export const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F8FAFC] select-none text-slate-800 antialiased font-sans">
+      {/* Mobile Backdrop */}
+      {isMobileNavOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-35 md:hidden"
+          onClick={() => setIsMobileNavOpen(false)}
+        />
+      )}
+
       {/* 1. DASHBOARD SIDEBAR */}
-      <aside className="w-64 border-r border-slate-200 bg-white flex flex-col justify-between shrink-0 z-20">
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-slate-200 bg-white flex flex-col justify-between shrink-0 transition-transform duration-200 md:static md:translate-x-0 ${
+          isMobileNavOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+        }`}
+      >
         <div>
           {/* Brand */}
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
@@ -349,9 +363,16 @@ export const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
       {/* 2. MAIN DASHBOARD CONTENT */}
       <div className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Top Header Bar */}
-        <header className="h-16 border-b border-slate-200 bg-white px-6 flex items-center justify-between gap-4 shrink-0">
-          {/* Interactive Breadcrumb Trail */}
+        <header className="h-16 border-b border-slate-200 bg-white px-4 sm:px-6 flex items-center justify-between gap-4 shrink-0">
+          {/* Interactive Breadcrumb Trail & Mobile Menu Button */}
           <div className="flex items-center gap-2 text-xs">
+            <button
+              onClick={() => setIsMobileNavOpen(!isMobileNavOpen)}
+              className="p-1.5 rounded-lg text-slate-600 hover:bg-slate-100 md:hidden cursor-pointer mr-1"
+              title="Open Navigation"
+            >
+              <Menu size={16} />
+            </button>
             <button
               onClick={onGoToLanding}
               className="text-slate-400 hover:text-blue-600 transition-colors font-medium cursor-pointer"

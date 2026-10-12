@@ -37,6 +37,8 @@ import {
   MoveHorizontal,
   MoveVertical,
   FileInput,
+  Box,
+  Sliders,
 } from 'lucide-react';
 import { DiagramData } from '../types/flowchart';
 import { SAMPLE_DIAGRAMS, SampleTemplate } from '../utils/samples';
@@ -85,6 +87,11 @@ interface ToolbarProps {
   onAlignNodes?: (alignment: AlignmentType) => void;
   onDistributeNodes?: (distribution: DistributionType) => void;
   onReorderNodes?: (action: 'bring-front' | 'send-back') => void;
+  isMobileOrTablet?: boolean;
+  onToggleMobileSidebar?: () => void;
+  onToggleMobileProperties?: () => void;
+  mobileSidebarOpen?: boolean;
+  mobilePropertiesOpen?: boolean;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -129,6 +136,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onAlignNodes,
   onDistributeNodes,
   onReorderNodes,
+  isMobileOrTablet = false,
+  onToggleMobileSidebar,
+  onToggleMobileProperties,
+  mobileSidebarOpen = false,
+  mobilePropertiesOpen = false,
 }) => {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isSamplesOpen, setIsSamplesOpen] = useState(false);
@@ -259,7 +271,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               type="text"
               value={diagram.title}
               onChange={(e) => onUpdateTitle(e.target.value)}
-              className="font-semibold text-xs sm:text-sm text-slate-900 bg-transparent hover:bg-slate-100/70 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-slate-300 rounded-lg px-2 py-1 border border-transparent w-28 sm:w-44 md:w-56 truncate transition-all"
+              className="font-semibold text-xs sm:text-sm text-slate-900 bg-transparent hover:bg-slate-100/70 focus:bg-white focus:ring-2 focus:ring-blue-500/20 focus:border-slate-300 rounded-lg px-2 py-1 border border-transparent w-20 xs:w-28 sm:w-44 md:w-56 truncate transition-all"
               placeholder="Untitled Flowchart"
               title="Click to rename flowchart"
             />
@@ -298,6 +310,40 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
       {/* Zone 2: Creation & Collaboration Action Bar */}
       <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Mobile / Tablet Drawer Buttons */}
+        {isMobileOrTablet && (
+          <div className="flex items-center gap-1">
+            {onToggleMobileSidebar && (
+              <button
+                onClick={onToggleMobileSidebar}
+                className={`flex items-center gap-1 text-xs font-semibold px-2 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                  mobileSidebarOpen
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                    : 'bg-white text-slate-700 hover:text-slate-900 border-slate-200 hover:bg-slate-50'
+                }`}
+                title="Shapes Library"
+              >
+                <Box size={13} className={mobileSidebarOpen ? 'text-white' : 'text-blue-600'} />
+                <span className="hidden sm:inline">Shapes</span>
+              </button>
+            )}
+            {onToggleMobileProperties && (
+              <button
+                onClick={onToggleMobileProperties}
+                className={`flex items-center gap-1 text-xs font-semibold px-2 py-1.5 rounded-lg border transition-all cursor-pointer ${
+                  mobilePropertiesOpen
+                    ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                    : 'bg-white text-slate-700 hover:text-slate-900 border-slate-200 hover:bg-slate-50'
+                }`}
+                title="Inspector / Properties"
+              >
+                <Sliders size={13} className={mobilePropertiesOpen ? 'text-white' : 'text-blue-600'} />
+                <span className="hidden sm:inline">Inspector</span>
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Creation Tools Segmented Control */}
         <div className="flex items-center bg-slate-100/80 p-0.5 rounded-lg border border-slate-200/80 shadow-[inset_0_1px_1px_rgba(0,0,0,0.02)]">
           {/* Upload Image / Sketch */}

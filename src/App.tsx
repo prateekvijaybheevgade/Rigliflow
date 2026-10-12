@@ -21,6 +21,7 @@ import { AuthModal } from './components/AuthModal';
 import { VersionHistoryDrawer } from './components/VersionHistoryDrawer';
 import { CommentsDrawer } from './components/CommentsDrawer';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
+import { Box, Sliders, X, LayoutGrid } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import {
   saveDiagramToFirestore,
@@ -59,6 +60,26 @@ function FlowlifyApp() {
   // Navigation View: 'landing', 'dashboard', or 'editor'
   const [currentView, setCurrentView] = useState<AppView>('landing');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+
+  // Responsive Mobile / Tablet Layout States
+  const [isMobileOrTablet, setIsMobileOrTablet] = useState<boolean>(
+    typeof window !== 'undefined' ? window.innerWidth < 1024 : false
+  );
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
+  const [mobilePropertiesOpen, setMobilePropertiesOpen] = useState<boolean>(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const isSmall = window.innerWidth < 1024;
+      setIsMobileOrTablet(isSmall);
+      if (!isSmall) {
+        setMobileSidebarOpen(false);
+        setMobilePropertiesOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // When user authenticates, transition from landing to dashboard
   useEffect(() => {
@@ -461,6 +482,22 @@ function FlowlifyApp() {
         const update = posMap.get(n.id);
         return update ? { ...n, x: update.x, y: update.y } : n;
       }),
+    }));
+  };
+
+  // Node dimensions resize update
+  const handleUpdateNodeDimensions = (
+    nodeId: string,
+    width: number,
+    height: number,
+    x: number,
+    y: number
+  ) => {
+    setDiagram((prev) => ({
+      ...prev,
+      nodes: prev.nodes.map((n) =>
+        n.id === nodeId ? { ...n, width, height, x, y } : n
+      ),
     }));
   };
 
@@ -1043,19 +1080,65 @@ function FlowlifyApp() {
         onAlignNodes={handleAlignNodes}
         onDistributeNodes={handleDistributeNodes}
         onReorderNodes={handleReorderNodes}
+        isMobileOrTablet={isMobileOrTablet}
+        onToggleMobileSidebar={() => setMobileSidebarOpen(!mobileSidebarOpen)}
+        onToggleMobileProperties={() => setMobilePropertiesOpen(!mobilePropertiesOpen)}
+        mobileSidebarOpen={mobileSidebarOpen}
+        mobilePropertiesOpen={mobilePropertiesOpen}
       />
 
       {/* Main Studio Work Area */}
       <div className="flex flex-1 h-[calc(100vh-3.5rem)] relative overflow-hidden">
-        {/* Left Sidebar: Shape Library */}
-        <Sidebar
-          onAddNode={handleAddNode}
-          onOpenUploadModal={() => setIsUploadModalOpen(true)}
-          onOpenAIPromptModal={() => setIsAIPromptModalOpen(true)}
-        />
+        {/* Left Sidebar: Shape Library (Docked on desktop >= 1024px, slide-over drawer on mobile/tablet) */}
+        {!isMobileOrTablet ? (
+          <Sidebar
+            onAddNode={handleAddNode}
+            onOpenUploadModal={() => setIsUploadModalOpen(true)}
+            onOpenAIPromptModal={() => setIsAIPromptModalOpen(true)}
+          />
+        ) : (
+          mobileSidebarOpen && (
+            <div className="fixed inset-0 z-50 flex">
+              <div
+                className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
+                onClick={() => setMobileSidebarOpen(false)}
+              />
+              <div className="relative z-50 w-72 max-w-[85vw] h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-left duration-200">
+                <div className="p-3 bg-slate-900 text-white flex items-center justify-between">
+                  <span className="font-bold text-xs flex items-center gap-2">
+                    <Box size={14} className="text-blue-400" />
+                    Shape Library
+                  </span>
+                  <button
+                    onClick={() => setMobileSidebarOpen(false)}
+                    className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  <Sidebar
+                    onAddNode={(type) => {
+                      handleAddNode(type);
+                      setMobileSidebarOpen(false);
+                    }}
+                    onOpenUploadModal={() => {
+                      setIsUploadModalOpen(true);
+                      setMobileSidebarOpen(false);
+                    }}
+                    onOpenAIPromptModal={() => {
+                      setIsAIPromptModalOpen(true);
+                      setMobileSidebarOpen(false);
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )
+        )}
 
-        {/* Center: Interactive Drag-and-Drop Canvas */}
-        <main className="flex-1 h-full relative">
+        {/* Center: Interactive Drag-and-Drop Canvas (Full 100% width on tablet/mobile) */}
+        <main className="flex-1 h-full relative w-full">
           <Canvas
             nodes={diagram.nodes}
             edges={diagram.edges}
@@ -1067,6 +1150,18 @@ function FlowlifyApp() {
             onUpdateNodePosition={handleUpdateNodePosition}
             onBatchUpdateNodePositions={handleBatchUpdateNodePositions}
             onUpdateNodeText={handleUpdateNodeText}
+            onUpdateNodeDimensions={handleUpdateNodeDimensions}
+            onDuplicateNode={handleDuplicateNode}
+            onDeleteNode={(id) => {
+              setSelectedNodeIds([id]);
+              handleDeleteSelectedNodes();
+            }}
+            onOpenProperties={() => {
+              if (isMobileOrTablet) {
+                setMobilePropertiesOpen(true);
+              }
+            }}
+            onZoomFit={handleZoomFit}
             onAddEdge={handleAddEdge}
             onDeleteEdge={handleDeleteEdge}
             onUpdateEdgeLabel={handleUpdateEdgeLabel}
@@ -1089,43 +1184,141 @@ function FlowlifyApp() {
             onDeletePage={handleDeletePage}
             onDuplicatePage={handleDuplicatePage}
           />
+
+          {/* Floating Mobile Bottom Action Dock */}
+          {isMobileOrTablet && (
+            <div className="absolute bottom-11 left-1/2 -translate-x-1/2 z-35 flex items-center gap-1.5 bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-xl border border-slate-700/80 text-white text-xs select-none">
+              <button
+                onClick={() => setMobileSidebarOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full hover:bg-slate-800 text-slate-200 active:bg-slate-700 transition-colors font-medium cursor-pointer"
+              >
+                <Box size={13} className="text-blue-400" />
+                <span>Shapes</span>
+              </button>
+              <div className="w-px h-4 bg-slate-700" />
+              <button
+                onClick={() => setMobilePropertiesOpen(true)}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full transition-colors font-medium cursor-pointer ${
+                  selectedNodeIds.length > 0
+                    ? 'bg-blue-600 text-white font-semibold'
+                    : 'text-slate-200 hover:bg-slate-800'
+                }`}
+              >
+                <Sliders
+                  size={13}
+                  className={selectedNodeIds.length > 0 ? 'text-white' : 'text-slate-400'}
+                />
+                <span>Inspector {selectedNodeIds.length > 0 ? `(${selectedNodeIds.length})` : ''}</span>
+              </button>
+              <div className="w-px h-4 bg-slate-700" />
+              <button
+                onClick={() => handleAutoLayout('top-down')}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-full hover:bg-slate-800 text-slate-200 active:bg-slate-700 transition-colors font-medium cursor-pointer"
+                title="Auto Layout"
+              >
+                <LayoutGrid size={13} className="text-amber-400" />
+                <span>Layout</span>
+              </button>
+            </div>
+          )}
         </main>
 
-        {/* Right: Properties Inspector Panel */}
-        <PropertiesPanel
-          selectedNode={selectedNode}
-          selectedEdge={selectedEdge}
-          selectedNodeIds={selectedNodeIds}
-          allNodes={diagram.nodes}
-          diagramTitle={diagram.title}
-          diagramDescription={diagram.description}
-          canvasBg={diagram.canvasBg || '#F8FAFC'}
-          gridType={diagram.gridType || 'dots'}
-          pageView={Boolean(diagram.pageView)}
-          snapToGrid={snapToGrid}
-          totalNodes={diagram.nodes.length}
-          totalEdges={diagram.edges.length}
-          onUpdateNode={handleUpdateNode}
-          onDeleteNode={(id) => {
-            setSelectedNodeIds([id]);
-            handleDeleteSelectedNodes();
-          }}
-          onDuplicateNode={handleDuplicateNode}
-          onUpdateEdge={handleUpdateEdge}
-          onDeleteEdge={handleDeleteEdge}
-          onUpdateDiagramInfo={(title, desc) =>
-            setDiagram((prev) => ({ ...prev, title, description: desc }))
-          }
-          onUpdateCanvasProps={handleUpdateCanvasProps}
-          onAlignNodes={handleAlignNodes}
-          onDistributeNodes={handleDistributeNodes}
-          onReorderNodes={handleReorderNodes}
-          nodeComments={comments}
-          onAddNodeComment={handleAddComment}
-          onToggleResolveComment={handleToggleResolveComment}
-          onDeleteComment={handleDeleteComment}
-          onOpenCommentsDrawer={() => setIsCommentsDrawerOpen(true)}
-        />
+        {/* Right: Properties Inspector Panel (Docked on desktop >= 1024px, slide-over drawer on mobile/tablet) */}
+        {!isMobileOrTablet ? (
+          <PropertiesPanel
+            selectedNode={selectedNode}
+            selectedEdge={selectedEdge}
+            selectedNodeIds={selectedNodeIds}
+            allNodes={diagram.nodes}
+            diagramTitle={diagram.title}
+            diagramDescription={diagram.description}
+            canvasBg={diagram.canvasBg || '#F8FAFC'}
+            gridType={diagram.gridType || 'dots'}
+            pageView={Boolean(diagram.pageView)}
+            snapToGrid={snapToGrid}
+            totalNodes={diagram.nodes.length}
+            totalEdges={diagram.edges.length}
+            onUpdateNode={handleUpdateNode}
+            onDeleteNode={(id) => {
+              setSelectedNodeIds([id]);
+              handleDeleteSelectedNodes();
+            }}
+            onDuplicateNode={handleDuplicateNode}
+            onUpdateEdge={handleUpdateEdge}
+            onDeleteEdge={handleDeleteEdge}
+            onUpdateDiagramInfo={(title, desc) =>
+              setDiagram((prev) => ({ ...prev, title, description: desc }))
+            }
+            onUpdateCanvasProps={handleUpdateCanvasProps}
+            onAlignNodes={handleAlignNodes}
+            onDistributeNodes={handleDistributeNodes}
+            onReorderNodes={handleReorderNodes}
+            nodeComments={comments}
+            onAddNodeComment={handleAddComment}
+            onToggleResolveComment={handleToggleResolveComment}
+            onDeleteComment={handleDeleteComment}
+            onOpenCommentsDrawer={() => setIsCommentsDrawerOpen(true)}
+          />
+        ) : (
+          mobilePropertiesOpen && (
+            <div className="fixed inset-0 z-50 flex justify-end">
+              <div
+                className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
+                onClick={() => setMobilePropertiesOpen(false)}
+              />
+              <div className="relative z-50 w-80 max-w-[90vw] h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-200">
+                <div className="p-3 bg-slate-900 text-white flex items-center justify-between">
+                  <span className="font-bold text-xs flex items-center gap-2">
+                    <Sliders size={14} className="text-blue-400" />
+                    Inspector & Style
+                  </span>
+                  <button
+                    onClick={() => setMobilePropertiesOpen(false)}
+                    className="p-1 hover:bg-slate-800 rounded text-slate-300 hover:text-white cursor-pointer"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto">
+                  <PropertiesPanel
+                    selectedNode={selectedNode}
+                    selectedEdge={selectedEdge}
+                    selectedNodeIds={selectedNodeIds}
+                    allNodes={diagram.nodes}
+                    diagramTitle={diagram.title}
+                    diagramDescription={diagram.description}
+                    canvasBg={diagram.canvasBg || '#F8FAFC'}
+                    gridType={diagram.gridType || 'dots'}
+                    pageView={Boolean(diagram.pageView)}
+                    snapToGrid={snapToGrid}
+                    totalNodes={diagram.nodes.length}
+                    totalEdges={diagram.edges.length}
+                    onUpdateNode={handleUpdateNode}
+                    onDeleteNode={(id) => {
+                      setSelectedNodeIds([id]);
+                      handleDeleteSelectedNodes();
+                    }}
+                    onDuplicateNode={handleDuplicateNode}
+                    onUpdateEdge={handleUpdateEdge}
+                    onDeleteEdge={handleDeleteEdge}
+                    onUpdateDiagramInfo={(title, desc) =>
+                      setDiagram((prev) => ({ ...prev, title, description: desc }))
+                    }
+                    onUpdateCanvasProps={handleUpdateCanvasProps}
+                    onAlignNodes={handleAlignNodes}
+                    onDistributeNodes={handleDistributeNodes}
+                    onReorderNodes={handleReorderNodes}
+                    nodeComments={comments}
+                    onAddNodeComment={handleAddComment}
+                    onToggleResolveComment={handleToggleResolveComment}
+                    onDeleteComment={handleDeleteComment}
+                    onOpenCommentsDrawer={() => setIsCommentsDrawerOpen(true)}
+                  />
+                </div>
+              </div>
+            </div>
+          )
+        )}
       </div>
 
       {/* Image Upload & AI Flowchart Vision Modal */}
