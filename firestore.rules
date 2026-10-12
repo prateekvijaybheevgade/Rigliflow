@@ -1,0 +1,129 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net - default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return true;
+    }
+
+    function isOwner(userId) {
+      return userId is string && userId.size() > 0;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User Profile Validation
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'photoURL', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid.size() > 0 && data.uid.size() <= 128 && data.uid == request.auth.uid &&
+        data.email is string && data.email.size() > 0 && data.email.size() <= 256 &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 100)) &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 2048));
+    }
+
+    // Diagram Validation
+    function isValidDiagram(data) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'nodes', 'edges']) &&
+        data.keys().hasOnly(['id', 'userId', 'title', 'description', 'direction', 'nodes', 'edges', 'pages', 'activePageIndex', 'canvasBg', 'gridType', 'pageView', 'originalImageUrl', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+        (!('direction' in data) || (data.direction in ['top-down', 'left-right'])) &&
+        data.nodes is list && data.nodes.size() <= 500 &&
+        data.edges is list && data.edges.size() <= 500 &&
+        (!('pages' in data) || (data.pages is list && data.pages.size() <= 50)) &&
+        (!('activePageIndex' in data) || (data.activePageIndex is number)) &&
+        (!('canvasBg' in data) || (data.canvasBg is string && data.canvasBg.size() <= 30)) &&
+        (!('gridType' in data) || (data.gridType in ['dots', 'lines', 'none'])) &&
+        (!('pageView' in data) || (data.pageView is bool)) &&
+        (!('originalImageUrl' in data) || (data.originalImageUrl is string && data.originalImageUrl.size() <= 100000));
+    }
+
+    // Diagram Version Validation
+    function isValidVersion(data) {
+      return data.keys().hasAll(['id', 'diagramId', 'userId', 'title', 'nodes', 'edges']) &&
+        data.keys().hasOnly(['id', 'diagramId', 'userId', 'title', 'description', 'direction', 'nodes', 'edges', 'pages', 'activePageIndex', 'canvasBg', 'gridType', 'pageView', 'versionNote', 'nodeCount', 'edgeCount', 'createdAt']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.diagramId is string && data.diagramId.size() > 0 && data.diagramId.size() <= 128 &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 100 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 500)) &&
+        (!('direction' in data) || (data.direction in ['top-down', 'left-right'])) &&
+        data.nodes is list && data.nodes.size() <= 500 &&
+        data.edges is list && data.edges.size() <= 500 &&
+        (!('pages' in data) || (data.pages is list && data.pages.size() <= 50)) &&
+        (!('activePageIndex' in data) || (data.activePageIndex is number)) &&
+        (!('canvasBg' in data) || (data.canvasBg is string && data.canvasBg.size() <= 30)) &&
+        (!('gridType' in data) || (data.gridType in ['dots', 'lines', 'none'])) &&
+        (!('pageView' in data) || (data.pageView is bool)) &&
+        (!('versionNote' in data) || (data.versionNote is string && data.versionNote.size() <= 200)) &&
+        (!('nodeCount' in data) || (data.nodeCount is number)) &&
+        (!('edgeCount' in data) || (data.edgeCount is number));
+    }
+
+    // Diagram Node Comment Validation
+    function isValidComment(data) {
+      return data.keys().hasAll(['id', 'diagramId', 'nodeId', 'userId', 'authorName', 'content']) &&
+        data.keys().hasOnly(['id', 'diagramId', 'nodeId', 'userId', 'authorName', 'authorPhotoURL', 'content', 'resolved', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() > 0 && data.id.size() <= 128 &&
+        data.diagramId is string && data.diagramId.size() > 0 && data.diagramId.size() <= 128 &&
+        data.nodeId is string && data.nodeId.size() > 0 && data.nodeId.size() <= 128 &&
+        data.userId is string && data.userId == request.auth.uid &&
+        data.authorName is string && data.authorName.size() > 0 && data.authorName.size() <= 100 &&
+        (!('authorPhotoURL' in data) || (data.authorPhotoURL is string && data.authorPhotoURL.size() <= 2048)) &&
+        data.content is string && data.content.size() > 0 && data.content.size() <= 2000 &&
+        (!('resolved' in data) || (data.resolved is bool));
+    }
+
+    // Match /users/{userId}
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUser(incoming()) && incoming().uid == existing().uid && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time;
+      allow delete: if false;
+
+      // Match /users/{userId}/diagrams/{diagramId}
+      match /diagrams/{diagramId} {
+        allow get: if isOwner(userId) && existing().userId == request.auth.uid;
+        allow list: if isOwner(userId) && resource.data.userId == request.auth.uid;
+        allow create: if isOwner(userId) && isValidId(diagramId) && isValidDiagram(incoming()) && incoming().userId == request.auth.uid && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+        allow update: if isOwner(userId) && isValidId(diagramId) && isValidDiagram(incoming()) && incoming().userId == existing().userId && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time;
+        allow delete: if isOwner(userId) && existing().userId == request.auth.uid;
+
+        // Match /users/{userId}/diagrams/{diagramId}/versions/{versionId}
+        match /versions/{versionId} {
+          allow get: if isOwner(userId) && existing().userId == request.auth.uid;
+          allow list: if isOwner(userId);
+          allow create: if isOwner(userId) && isValidId(versionId) && isValidVersion(incoming()) && incoming().userId == request.auth.uid && incoming().diagramId == diagramId && incoming().createdAt == request.time;
+          allow delete: if isOwner(userId) && existing().userId == request.auth.uid;
+          allow update: if false;
+        }
+
+        // Match /users/{userId}/diagrams/{diagramId}/comments/{commentId}
+        match /comments/{commentId} {
+          allow get: if isOwner(userId) && existing().userId == request.auth.uid;
+          allow list: if isOwner(userId);
+          allow create: if isOwner(userId) && isValidId(commentId) && isValidComment(incoming()) && incoming().userId == request.auth.uid && incoming().diagramId == diagramId && incoming().createdAt == request.time && incoming().updatedAt == request.time;
+          allow update: if isOwner(userId) && isValidId(commentId) && isValidComment(incoming()) && incoming().userId == existing().userId && incoming().diagramId == diagramId && incoming().createdAt == existing().createdAt && incoming().updatedAt == request.time;
+          allow delete: if isOwner(userId) && existing().userId == request.auth.uid;
+        }
+      }
+    }
+  }
+}

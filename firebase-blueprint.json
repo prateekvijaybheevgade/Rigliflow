@@ -1,0 +1,276 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "User ID matching auth UID"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User display name"
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address"
+        },
+        "photoURL": {
+          "type": "string",
+          "description": "Profile picture URL"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["uid", "email"]
+    },
+    "Diagram": {
+      "title": "Diagram",
+      "description": "User created or imported flowchart diagram",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Diagram unique identifier"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user UID"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Diagram title"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Diagram description"
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["top-down", "left-right"],
+          "description": "Flowchart layout direction"
+        },
+        "nodes": {
+          "type": "array",
+          "description": "List of flowchart nodes"
+        },
+        "edges": {
+          "type": "array",
+          "description": "List of flowchart edges"
+        },
+        "originalImageUrl": {
+          "type": "string",
+          "maxLength": 100000,
+          "description": "Optional original uploaded sketch or image"
+        },
+        "pages": {
+          "type": "array",
+          "description": "Optional multi-page diagram pages"
+        },
+        "activePageIndex": {
+          "type": "number",
+          "description": "Currently active page index"
+        },
+        "canvasBg": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Canvas background color"
+        },
+        "gridType": {
+          "type": "string",
+          "enum": ["dots", "lines", "none"],
+          "description": "Grid display style"
+        },
+        "pageView": {
+          "type": "boolean",
+          "description": "Whether page boundaries are visible"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["id", "userId", "title", "nodes", "edges"]
+    },
+    "DiagramVersion": {
+      "title": "DiagramVersion",
+      "description": "Historical snapshot of a diagram for tracking and restoring previous states",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Version unique identifier"
+        },
+        "diagramId": {
+          "type": "string",
+          "description": "Parent diagram ID"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user UID"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Diagram title at time of snapshot"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500,
+          "description": "Diagram description at time of snapshot"
+        },
+        "direction": {
+          "type": "string",
+          "enum": ["top-down", "left-right"],
+          "description": "Flowchart layout direction"
+        },
+        "nodes": {
+          "type": "array",
+          "description": "List of flowchart nodes"
+        },
+        "edges": {
+          "type": "array",
+          "description": "List of flowchart edges"
+        },
+        "versionNote": {
+          "type": "string",
+          "maxLength": 200,
+          "description": "User or system note explaining what changed"
+        },
+        "nodeCount": {
+          "type": "number",
+          "description": "Count of nodes in snapshot"
+        },
+        "edgeCount": {
+          "type": "number",
+          "description": "Count of edges in snapshot"
+        },
+        "pages": {
+          "type": "array",
+          "description": "Optional multi-page diagram pages"
+        },
+        "activePageIndex": {
+          "type": "number",
+          "description": "Currently active page index"
+        },
+        "canvasBg": {
+          "type": "string",
+          "maxLength": 30,
+          "description": "Canvas background color"
+        },
+        "gridType": {
+          "type": "string",
+          "enum": ["dots", "lines", "none"],
+          "description": "Grid display style"
+        },
+        "pageView": {
+          "type": "boolean",
+          "description": "Whether page boundaries are visible"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp of this version"
+        }
+      },
+      "required": ["id", "diagramId", "userId", "title", "nodes", "edges"]
+    },
+    "DiagramComment": {
+      "title": "DiagramComment",
+      "description": "Collaboration comment attached to a specific flowchart node",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique comment identifier"
+        },
+        "diagramId": {
+          "type": "string",
+          "description": "Parent diagram identifier"
+        },
+        "nodeId": {
+          "type": "string",
+          "description": "Target flowchart node identifier this comment is attached to"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Author user UID"
+        },
+        "authorName": {
+          "type": "string",
+          "maxLength": 100,
+          "description": "Author display name"
+        },
+        "authorPhotoURL": {
+          "type": "string",
+          "maxLength": 2048,
+          "description": "Optional author avatar photo URL"
+        },
+        "content": {
+          "type": "string",
+          "maxLength": 2000,
+          "description": "Text body of the comment"
+        },
+        "resolved": {
+          "type": "boolean",
+          "description": "Whether the comment thread is marked as resolved"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["id", "diagramId", "nodeId", "userId", "authorName", "content"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "Stores user profile information"
+    },
+    "/users/{userId}/diagrams/{diagramId}": {
+      "schema": {
+        "$ref": "#/entities/Diagram"
+      },
+      "description": "Stores flowchart diagrams owned by the user"
+    },
+    "/users/{userId}/diagrams/{diagramId}/versions/{versionId}": {
+      "schema": {
+        "$ref": "#/entities/DiagramVersion"
+      },
+      "description": "Stores historical snapshot versions of a diagram for version history and restore capabilities"
+    },
+    "/users/{userId}/diagrams/{diagramId}/comments/{commentId}": {
+      "schema": {
+        "$ref": "#/entities/DiagramComment"
+      },
+      "description": "Stores node-level collaboration comments attached to specific flowchart nodes"
+    }
+  }
+}

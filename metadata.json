@@ -1,0 +1,6 @@
+{
+  "name": "DiagramForge - AI Image to Editable Flowchart Studio",
+  "description": "Turn hand-drawn sketches, whiteboard diagrams, or architecture images into interactive, editable flowcharts with drag-and-drop customization and SVG/PDF export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

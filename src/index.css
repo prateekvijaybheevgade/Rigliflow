@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body {
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: #f8fafc;
+    color: #0f172a;
+    letter-spacing: -0.011em;
+  }
+
+  code, pre, kbd {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  }
+}
+
+/* Custom crisp studio scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Subtle studio shadow & border presets */
+.studio-border {
+  border-color: rgba(226, 232, 240, 0.9);
+}
+
+.studio-panel {
+  background: rgba(255, 255, 255, 0.98);
+  backdrop-filter: blur(12px);
+}
+
+/* Smooth node selection transition */
+.node-glow-selected {
+  filter: drop-shadow(0 0 0 2px #2563eb) drop-shadow(0 8px 16px rgba(37, 99, 235, 0.12));
+}
+
+/* Print export optimization */
+@media print {
+  body {
+    background: white;
+  }
+}
