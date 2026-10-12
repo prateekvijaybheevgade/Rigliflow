@@ -338,11 +338,17 @@ function FlowlifyApp() {
   };
 
   // Add Node
-  const handleAddNode = (type: NodeType) => {
+  const handleAddNode = (type: NodeType, targetX?: number, targetY?: number) => {
     pushHistory(diagram);
 
-    const canvasCenterX = Math.round((-pan.x + window.innerWidth / 2 - 100) / zoom);
-    const canvasCenterY = Math.round((-pan.y + window.innerHeight / 2 - 50) / zoom);
+    const canvasCenterX =
+      targetX !== undefined
+        ? targetX
+        : Math.round((-pan.x + window.innerWidth / 2 - 100) / zoom);
+    const canvasCenterY =
+      targetY !== undefined
+        ? targetY
+        : Math.round((-pan.y + window.innerHeight / 2 - 50) / zoom);
 
     const defaultColors: Record<NodeType, string> = {
       process: '#3B82F6',
@@ -1183,6 +1189,7 @@ function FlowlifyApp() {
             onRenamePage={handleRenamePage}
             onDeletePage={handleDeletePage}
             onDuplicatePage={handleDuplicatePage}
+            onAddNodeAt={(type, x, y) => handleAddNode(type, x, y)}
           />
 
           {/* Floating Mobile Bottom Action Dock */}

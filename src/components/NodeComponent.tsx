@@ -1,7 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { FlowNode, PortPosition, Point } from '../types/flowchart';
 import * as LucideIcons from 'lucide-react';
-import { MessageSquare, Lock, Pencil, Copy, Trash2, Sliders, Check } from 'lucide-react';
+import {
+  MessageSquare,
+  Lock,
+  Pencil,
+  Copy,
+  Trash2,
+  Sliders,
+  Check,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+} from 'lucide-react';
 
 interface NodeComponentProps {
   node: FlowNode;
@@ -20,6 +31,8 @@ interface NodeComponentProps {
   onDuplicateNode?: (nodeId: string) => void;
   onDeleteNode?: (nodeId: string) => void;
   onOpenProperties?: (nodeId: string) => void;
+  onScaleNode?: (nodeId: string, factor: number) => void;
+  onFocusNode?: (node: FlowNode) => void;
   zoom: number;
   commentCount?: number;
   hasUnresolvedComments?: boolean;
@@ -39,6 +52,8 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
   onDuplicateNode,
   onDeleteNode,
   onOpenProperties,
+  onScaleNode,
+  onFocusNode,
   zoom,
   commentCount,
   hasUnresolvedComments,
@@ -78,13 +93,13 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
     if (isEditing) return;
     const now = Date.now();
     const timeSinceLastTap = now - lastTouchTimeRef.current;
     lastTouchTimeRef.current = now;
 
     if (timeSinceLastTap < 320 && !node.isLocked) {
-      e.stopPropagation();
       e.preventDefault();
       setIsEditing(true);
       return;
@@ -184,7 +199,8 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
       onMouseDown={(e) => {
         if (isEditing) return;
         if (e.button === 0) {
-          // Left click
+          // Left click on node - prevent canvas from stealing selection & pan
+          e.stopPropagation();
           onSelect(node.id, e.shiftKey || e.ctrlKey || e.metaKey);
           if (!node.isLocked) {
             onDragStart(e, node);
@@ -537,6 +553,44 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
               <span>Edit</span>
             </button>
           )}
+
+          {/* Quick Node Size Controls */}
+          {onScaleNode && !node.isLocked && (
+            <div className="flex items-center border-l border-slate-700/80 pl-1 ml-0.5 gap-0.5">
+              <button
+                type="button"
+                onClick={() => onScaleNode(node.id, 0.8)}
+                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full hover:bg-slate-800 text-[11px] text-slate-300 hover:text-white transition-colors cursor-pointer"
+                title="Decrease Node Size (-20%)"
+              >
+                <ZoomOut size={11} />
+                <span className="text-[10px]">-</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onScaleNode(node.id, 1.25)}
+                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full hover:bg-slate-800 text-[11px] text-slate-300 hover:text-white transition-colors cursor-pointer"
+                title="Increase Node Size (+25%)"
+              >
+                <ZoomIn size={11} />
+                <span className="text-[10px]">+</span>
+              </button>
+            </div>
+          )}
+
+          {/* Zoom Canvas to Node Button */}
+          {onFocusNode && (
+            <button
+              type="button"
+              onClick={() => onFocusNode(node)}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-full hover:bg-slate-800 text-[11px] text-amber-300 hover:text-amber-200 transition-colors cursor-pointer border-l border-slate-700/80 pl-1"
+              title="Zoom Canvas into Node"
+            >
+              <Maximize2 size={11} />
+              <span className="text-[10px]">Zoom</span>
+            </button>
+          )}
+
           {onDuplicateNode && !node.isLocked && (
             <button
               onClick={() => onDuplicateNode(node.id)}
@@ -567,71 +621,83 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
         </div>
       )}
 
-      {/* 4 Interactive Corner Resizing Handles (NW, NE, SE, SW) */}
+      {/* 4 Interactive Corner Resizing Handles (NW, NE, SE, SW) - Enhanced for Mouse & Touch */}
       {isSelected && !node.isLocked && !isEditing && (
         <>
           {/* Top-Left Handle (NW) */}
           <div
-            className="absolute -top-3 -left-3 w-7 h-7 flex items-center justify-center cursor-nwse-resize z-45"
+            className="absolute flex items-center justify-center cursor-nwse-resize z-45 touch-none"
+            style={{ top: -16, left: -16, width: 32, height: 32 }}
             title="Resize (Top-Left)"
             onMouseDown={(e) => {
               e.stopPropagation();
+              e.preventDefault();
               onResizeStart?.(e, 'nw', node);
             }}
             onTouchStart={(e) => {
               e.stopPropagation();
+              e.preventDefault();
               onResizeStart?.(e, 'nw', node);
             }}
           >
-            <div className="w-2.5 h-2.5 rounded-full bg-white border-2 border-blue-600 shadow-sm transition-transform hover:scale-125" />
+            <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-blue-600 shadow-md ring-2 ring-white/90 transition-transform hover:scale-125 active:scale-125" />
           </div>
 
           {/* Top-Right Handle (NE) */}
           <div
-            className="absolute -top-3 -right-3 w-7 h-7 flex items-center justify-center cursor-nesw-resize z-45"
+            className="absolute flex items-center justify-center cursor-nesw-resize z-45 touch-none"
+            style={{ top: -16, right: -16, width: 32, height: 32 }}
             title="Resize (Top-Right)"
             onMouseDown={(e) => {
               e.stopPropagation();
+              e.preventDefault();
               onResizeStart?.(e, 'ne', node);
             }}
             onTouchStart={(e) => {
               e.stopPropagation();
+              e.preventDefault();
               onResizeStart?.(e, 'ne', node);
             }}
           >
-            <div className="w-2.5 h-2.5 rounded-full bg-white border-2 border-blue-600 shadow-sm transition-transform hover:scale-125" />
+            <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-blue-600 shadow-md ring-2 ring-white/90 transition-transform hover:scale-125 active:scale-125" />
           </div>
 
           {/* Bottom-Right Handle (SE) */}
           <div
-            className="absolute -bottom-3 -right-3 w-7 h-7 flex items-center justify-center cursor-nwse-resize z-45"
+            className="absolute flex items-center justify-center cursor-nwse-resize z-45 touch-none"
+            style={{ bottom: -16, right: -16, width: 32, height: 32 }}
             title="Resize (Bottom-Right)"
             onMouseDown={(e) => {
               e.stopPropagation();
+              e.preventDefault();
               onResizeStart?.(e, 'se', node);
             }}
             onTouchStart={(e) => {
               e.stopPropagation();
+              e.preventDefault();
               onResizeStart?.(e, 'se', node);
             }}
           >
-            <div className="w-2.5 h-2.5 rounded-full bg-white border-2 border-blue-600 shadow-sm transition-transform hover:scale-125" />
+            <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-blue-600 shadow-md ring-2 ring-white/90 transition-transform hover:scale-125 active:scale-125" />
           </div>
 
           {/* Bottom-Left Handle (SW) */}
           <div
-            className="absolute -bottom-3 -left-3 w-7 h-7 flex items-center justify-center cursor-nesw-resize z-45"
+            className="absolute flex items-center justify-center cursor-nesw-resize z-45 touch-none"
+            style={{ bottom: -16, left: -16, width: 32, height: 32 }}
             title="Resize (Bottom-Left)"
             onMouseDown={(e) => {
               e.stopPropagation();
+              e.preventDefault();
               onResizeStart?.(e, 'sw', node);
             }}
             onTouchStart={(e) => {
               e.stopPropagation();
+              e.preventDefault();
               onResizeStart?.(e, 'sw', node);
             }}
           >
-            <div className="w-2.5 h-2.5 rounded-full bg-white border-2 border-blue-600 shadow-sm transition-transform hover:scale-125" />
+            <div className="w-3.5 h-3.5 rounded-full bg-white border-2 border-blue-600 shadow-md ring-2 ring-white/90 transition-transform hover:scale-125 active:scale-125" />
           </div>
         </>
       )}

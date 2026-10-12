@@ -52,6 +52,8 @@ import {
   MoveHorizontal,
   MoveVertical,
   Check,
+  ZoomIn,
+  ZoomOut,
 } from 'lucide-react';
 
 export interface PredefinedIconOverlay {
@@ -445,6 +447,113 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                     <option value="note">Sticky Note</option>
                     <option value="text">Text Box (Transparent)</option>
                   </select>
+                </div>
+
+                {/* Node Size & Dimensions */}
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+                      Size & Dimensions (px)
+                    </label>
+                    <span className="text-[10px] text-slate-400 font-mono font-semibold">
+                      {selectedNode.width} × {selectedNode.height}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <div>
+                      <span className="block text-[9.5px] text-slate-400 font-semibold mb-0.5">Width</span>
+                      <input
+                        type="number"
+                        min="60"
+                        max="800"
+                        step="10"
+                        value={selectedNode.width}
+                        onChange={(e) => onUpdateNode({ width: Math.max(60, Number(e.target.value) || 60) })}
+                        className="w-full px-2 py-1 border border-slate-200 rounded-md text-slate-700 text-xs font-mono bg-slate-50 focus:bg-white"
+                      />
+                    </div>
+                    <div>
+                      <span className="block text-[9.5px] text-slate-400 font-semibold mb-0.5">Height</span>
+                      <input
+                        type="number"
+                        min="40"
+                        max="600"
+                        step="5"
+                        value={selectedNode.height}
+                        onChange={(e) => onUpdateNode({ height: Math.max(40, Number(e.target.value) || 40) })}
+                        className="w-full px-2 py-1 border border-slate-200 rounded-md text-slate-700 text-xs font-mono bg-slate-50 focus:bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick Scale Buttons */}
+                  <div className="grid grid-cols-3 gap-1 mb-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateNode({
+                          width: Math.max(60, Math.round(selectedNode.width * 0.8)),
+                          height: Math.max(40, Math.round(selectedNode.height * 0.8)),
+                        })
+                      }
+                      className="px-1.5 py-1 text-[10px] font-semibold bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded text-slate-600 transition-colors cursor-pointer flex items-center justify-center gap-1"
+                      title="Shrink Node by 20%"
+                    >
+                      <ZoomOut size={10} />
+                      <span>-20%</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateNode({
+                          width: Math.min(800, Math.round(selectedNode.width * 1.25)),
+                          height: Math.min(600, Math.round(selectedNode.height * 1.25)),
+                        })
+                      }
+                      className="px-1.5 py-1 text-[10px] font-semibold bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-blue-700 transition-colors cursor-pointer flex items-center justify-center gap-1"
+                      title="Enlarge Node by 25%"
+                    >
+                      <ZoomIn size={10} />
+                      <span>+25%</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateNode({
+                          width: Math.min(800, Math.round(selectedNode.width * 1.5)),
+                          height: Math.min(600, Math.round(selectedNode.height * 1.5)),
+                        })
+                      }
+                      className="px-1.5 py-1 text-[10px] font-semibold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded text-indigo-700 transition-colors cursor-pointer flex items-center justify-center gap-1"
+                      title="Enlarge Node by 50%"
+                    >
+                      <ZoomIn size={10} />
+                      <span>+50%</span>
+                    </button>
+                  </div>
+
+                  {/* Size Presets */}
+                  <div className="flex items-center gap-1">
+                    {[
+                      { label: 'S (150×65)', w: 150, h: 65 },
+                      { label: 'M (210×75)', w: 210, h: 75 },
+                      { label: 'L (280×100)', w: 280, h: 100 },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => onUpdateNode({ width: preset.w, height: preset.h })}
+                        className={`flex-1 py-0.5 text-[9.5px] rounded border transition-colors cursor-pointer ${
+                          selectedNode.width === preset.w && selectedNode.height === preset.h
+                            ? 'bg-blue-600 text-white border-blue-600 font-bold'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Fill Type */}
@@ -842,34 +951,109 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
             {activeTab === 'arrange' && (
               <>
                 {/* Dimensions */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] text-slate-400 font-semibold mb-0.5">
-                      Width (px)
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10.5px] font-bold text-slate-500 uppercase tracking-wider">
+                      Dimensions & Scale
                     </label>
-                    <input
-                      type="number"
-                      min="80"
-                      max="600"
-                      step="10"
-                      value={selectedNode.width}
-                      onChange={(e) => onUpdateNode({ width: Number(e.target.value) })}
-                      className="w-full px-2 py-1 border border-slate-200 rounded-md text-slate-700 text-xs"
-                    />
+                    <span className="text-[10px] text-slate-400 font-mono font-semibold">
+                      {selectedNode.width} × {selectedNode.height}
+                    </span>
                   </div>
-                  <div>
-                    <label className="block text-[10px] text-slate-400 font-semibold mb-0.5">
-                      Height (px)
-                    </label>
-                    <input
-                      type="number"
-                      min="40"
-                      max="400"
-                      step="5"
-                      value={selectedNode.height}
-                      onChange={(e) => onUpdateNode({ height: Number(e.target.value) })}
-                      className="w-full px-2 py-1 border border-slate-200 rounded-md text-slate-700 text-xs"
-                    />
+
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <div>
+                      <span className="block text-[9.5px] text-slate-400 font-semibold mb-0.5">Width (px)</span>
+                      <input
+                        type="number"
+                        min="60"
+                        max="800"
+                        step="10"
+                        value={selectedNode.width}
+                        onChange={(e) => onUpdateNode({ width: Math.max(60, Number(e.target.value) || 60) })}
+                        className="w-full px-2 py-1 border border-slate-200 rounded-md text-slate-700 text-xs font-mono bg-slate-50 focus:bg-white"
+                      />
+                    </div>
+                    <div>
+                      <span className="block text-[9.5px] text-slate-400 font-semibold mb-0.5">Height (px)</span>
+                      <input
+                        type="number"
+                        min="40"
+                        max="600"
+                        step="5"
+                        value={selectedNode.height}
+                        onChange={(e) => onUpdateNode({ height: Math.max(40, Number(e.target.value) || 40) })}
+                        className="w-full px-2 py-1 border border-slate-200 rounded-md text-slate-700 text-xs font-mono bg-slate-50 focus:bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Quick Scale Buttons */}
+                  <div className="grid grid-cols-3 gap-1 mb-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateNode({
+                          width: Math.max(60, Math.round(selectedNode.width * 0.8)),
+                          height: Math.max(40, Math.round(selectedNode.height * 0.8)),
+                        })
+                      }
+                      className="px-1.5 py-1 text-[10px] font-semibold bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded text-slate-600 transition-colors cursor-pointer flex items-center justify-center gap-1"
+                      title="Shrink Node by 20%"
+                    >
+                      <ZoomOut size={10} />
+                      <span>-20%</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateNode({
+                          width: Math.min(800, Math.round(selectedNode.width * 1.25)),
+                          height: Math.min(600, Math.round(selectedNode.height * 1.25)),
+                        })
+                      }
+                      className="px-1.5 py-1 text-[10px] font-semibold bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded text-blue-700 transition-colors cursor-pointer flex items-center justify-center gap-1"
+                      title="Enlarge Node by 25%"
+                    >
+                      <ZoomIn size={10} />
+                      <span>+25%</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        onUpdateNode({
+                          width: Math.min(800, Math.round(selectedNode.width * 1.5)),
+                          height: Math.min(600, Math.round(selectedNode.height * 1.5)),
+                        })
+                      }
+                      className="px-1.5 py-1 text-[10px] font-semibold bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded text-indigo-700 transition-colors cursor-pointer flex items-center justify-center gap-1"
+                      title="Enlarge Node by 50%"
+                    >
+                      <ZoomIn size={10} />
+                      <span>+50%</span>
+                    </button>
+                  </div>
+
+                  {/* Size Presets */}
+                  <div className="flex items-center gap-1">
+                    {[
+                      { label: 'S (150×65)', w: 150, h: 65 },
+                      { label: 'M (210×75)', w: 210, h: 75 },
+                      { label: 'L (280×100)', w: 280, h: 100 },
+                    ].map((preset) => (
+                      <button
+                        key={preset.label}
+                        type="button"
+                        onClick={() => onUpdateNode({ width: preset.w, height: preset.h })}
+                        className={`flex-1 py-0.5 text-[9.5px] rounded border transition-colors cursor-pointer ${
+                          selectedNode.width === preset.w && selectedNode.height === preset.h
+                            ? 'bg-blue-600 text-white border-blue-600 font-bold'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
 

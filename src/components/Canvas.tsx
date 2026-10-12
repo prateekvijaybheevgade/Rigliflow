@@ -57,6 +57,7 @@ interface CanvasProps {
   commentsCountByNodeId?: Record<string, number>;
   hasUnresolvedCommentsByNodeId?: Record<string, boolean>;
   onOpenNodeComments?: (nodeId: string) => void;
+  onAddNodeAt?: (type: any, x: number, y: number) => void;
 
   // Multi-Page support (draw.io style)
   pages?: DiagramPage[];
@@ -99,6 +100,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   commentsCountByNodeId,
   hasUnresolvedCommentsByNodeId,
   onOpenNodeComments,
+  onAddNodeAt,
 
   pages = [],
   activePageIndex = 0,
@@ -112,11 +114,12 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Dragging Nodes state
   const [isDraggingNode, setIsDraggingNode] = useState(false);
+  const isDraggingNodeRef = useRef(false);
   const dragStartMousePos = useRef<Point>({ x: 0, y: 0 });
   const initialNodePositions = useRef<{ id: string; x: number; y: number }[]>([]);
 
   // Interactive Resizing Node state
-  const [resizingNode, setResizingNode] = useState<{
+  type ResizingNodeData = {
     nodeId: string;
     handle: 'nw' | 'ne' | 'se' | 'sw';
     initialX: number;
@@ -125,10 +128,13 @@ export const Canvas: React.FC<CanvasProps> = ({
     initialHeight: number;
     startScreenX: number;
     startScreenY: number;
-  } | null>(null);
+  };
+  const [resizingNode, setResizingNode] = useState<ResizingNodeData | null>(null);
+  const resizingNodeRef = useRef<ResizingNodeData | null>(null);
 
   // Canvas Panning state
   const [isPanning, setIsPanning] = useState(false);
+  const isPanningRef = useRef(false);
   const panStartMousePos = useRef<Point>({ x: 0, y: 0 });
   const initialPan = useRef<Point>({ x: 0, y: 0 });
 
@@ -167,6 +173,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   const handleNodeDragStart = (e: React.MouseEvent, clickedNode: FlowNode) => {
     e.stopPropagation();
     setIsDraggingNode(true);
+    isDraggingNodeRef.current = true;
     dragStartMousePos.current = { x: e.clientX, y: e.clientY };
 
     const isAlreadySelected = selectedNodeIds.includes(clickedNode.id);
@@ -182,6 +189,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     if (e.touches.length !== 1) return;
     e.stopPropagation();
     setIsDraggingNode(true);
+    isDraggingNodeRef.current = true;
     dragStartMousePos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
 
     const isAlreadySelected = selectedNodeIds.includes(clickedNode.id);
@@ -201,7 +209,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     e.stopPropagation();
     const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
     const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    setResizingNode({
+    const rData: ResizingNodeData = {
       nodeId: node.id,
       handle,
       initialX: node.x,
@@ -210,7 +218,9 @@ export const Canvas: React.FC<CanvasProps> = ({
       initialHeight: node.height,
       startScreenX: clientX,
       startScreenY: clientY,
-    });
+    };
+    setResizingNode(rData);
+    resizingNodeRef.current = rData;
   };
 
   // Port Mouse Down (Start connecting)
@@ -243,32 +253,32 @@ export const Canvas: React.FC<CanvasProps> = ({
   };
 
   // Helper: Apply Resize calculations
-  const applyResize = (dx: number, dy: number) => {
-    if (!resizingNode || !onUpdateNodeDimensions) return;
-    let newWidth = resizingNode.initialWidth;
-    let newHeight = resizingNode.initialHeight;
-    let newX = resizingNode.initialX;
-    let newY = resizingNode.initialY;
+  const applyResize = (data: ResizingNodeData, dx: number, dy: number) => {
+    if (!onUpdateNodeDimensions) return;
+    let newWidth = data.initialWidth;
+    let newHeight = data.initialHeight;
+    let newX = data.initialX;
+    let newY = data.initialY;
 
-    const minW = 80;
-    const minH = 45;
+    const minW = 60;
+    const minH = 40;
 
-    if (resizingNode.handle === 'se') {
-      newWidth = Math.max(minW, resizingNode.initialWidth + dx);
-      newHeight = Math.max(minH, resizingNode.initialHeight + dy);
-    } else if (resizingNode.handle === 'sw') {
-      newWidth = Math.max(minW, resizingNode.initialWidth - dx);
-      newX = resizingNode.initialX + (resizingNode.initialWidth - newWidth);
-      newHeight = Math.max(minH, resizingNode.initialHeight + dy);
-    } else if (resizingNode.handle === 'ne') {
-      newWidth = Math.max(minW, resizingNode.initialWidth + dx);
-      newHeight = Math.max(minH, resizingNode.initialHeight - dy);
-      newY = resizingNode.initialY + (resizingNode.initialHeight - newHeight);
-    } else if (resizingNode.handle === 'nw') {
-      newWidth = Math.max(minW, resizingNode.initialWidth - dx);
-      newX = resizingNode.initialX + (resizingNode.initialWidth - newWidth);
-      newHeight = Math.max(minH, resizingNode.initialHeight - dy);
-      newY = resizingNode.initialY + (resizingNode.initialHeight - newHeight);
+    if (data.handle === 'se') {
+      newWidth = Math.max(minW, data.initialWidth + dx);
+      newHeight = Math.max(minH, data.initialHeight + dy);
+    } else if (data.handle === 'sw') {
+      newWidth = Math.max(minW, data.initialWidth - dx);
+      newX = data.initialX + (data.initialWidth - newWidth);
+      newHeight = Math.max(minH, data.initialHeight + dy);
+    } else if (data.handle === 'ne') {
+      newWidth = Math.max(minW, data.initialWidth + dx);
+      newHeight = Math.max(minH, data.initialHeight - dy);
+      newY = data.initialY + (data.initialHeight - newHeight);
+    } else if (data.handle === 'nw') {
+      newWidth = Math.max(minW, data.initialWidth - dx);
+      newX = data.initialX + (data.initialWidth - newWidth);
+      newHeight = Math.max(minH, data.initialHeight - dy);
+      newY = data.initialY + (data.initialHeight - newHeight);
     }
 
     if (snapToGrid) {
@@ -278,40 +288,23 @@ export const Canvas: React.FC<CanvasProps> = ({
       newY = Math.round(newY / gridSize) * gridSize;
     }
 
-    onUpdateNodeDimensions(resizingNode.nodeId, newWidth, newHeight, newX, newY);
+    onUpdateNodeDimensions(data.nodeId, newWidth, newHeight, newX, newY);
   };
 
   // Global mouse and touch event listeners
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       // 1. Resizing Node
-      if (resizingNode) {
-        const dx = (e.clientX - resizingNode.startScreenX) / zoom;
-        const dy = (e.clientY - resizingNode.startScreenY) / zoom;
-        applyResize(dx, dy);
+      const currentResize = resizingNodeRef.current;
+      if (currentResize) {
+        const dx = (e.clientX - currentResize.startScreenX) / zoom;
+        const dy = (e.clientY - currentResize.startScreenY) / zoom;
+        applyResize(currentResize, dx, dy);
         return;
       }
 
-      // 2. Panning canvas
-      if (isPanning) {
-        const dx = e.clientX - panStartMousePos.current.x;
-        const dy = e.clientY - panStartMousePos.current.y;
-        onPanChange({
-          x: initialPan.current.x + dx,
-          y: initialPan.current.y + dy,
-        });
-        return;
-      }
-
-      // 3. Marquee selection
-      if (marqueeStart) {
-        const canvasPos = screenToCanvas(e.clientX, e.clientY);
-        setMarqueeCurrent(canvasPos);
-        return;
-      }
-
-      // 4. Dragging Nodes
-      if (isDraggingNode && initialNodePositions.current.length > 0) {
+      // 2. Dragging Nodes
+      if (isDraggingNodeRef.current && initialNodePositions.current.length > 0) {
         const dx = (e.clientX - dragStartMousePos.current.x) / zoom;
         const dy = (e.clientY - dragStartMousePos.current.y) / zoom;
 
@@ -328,6 +321,24 @@ export const Canvas: React.FC<CanvasProps> = ({
         });
 
         onBatchUpdateNodePositions(updatedPositions);
+        return;
+      }
+
+      // 3. Panning canvas
+      if (isPanningRef.current) {
+        const dx = e.clientX - panStartMousePos.current.x;
+        const dy = e.clientY - panStartMousePos.current.y;
+        onPanChange({
+          x: initialPan.current.x + dx,
+          y: initialPan.current.y + dy,
+        });
+        return;
+      }
+
+      // 4. Marquee selection
+      if (marqueeStart) {
+        const canvasPos = screenToCanvas(e.clientX, e.clientY);
+        setMarqueeCurrent(canvasPos);
         return;
       }
 
@@ -349,17 +360,12 @@ export const Canvas: React.FC<CanvasProps> = ({
     };
 
     const handleMouseUp = (e: MouseEvent) => {
-      if (resizingNode) {
-        setResizingNode(null);
-      }
-
-      if (isPanning) {
-        setIsPanning(false);
-      }
-
-      if (isDraggingNode) {
-        setIsDraggingNode(false);
-      }
+      setResizingNode(null);
+      resizingNodeRef.current = null;
+      setIsPanning(false);
+      isPanningRef.current = false;
+      setIsDraggingNode(false);
+      isDraggingNodeRef.current = false;
 
       // Marquee selection end
       if (marqueeStart && marqueeCurrent) {
@@ -430,18 +436,41 @@ export const Canvas: React.FC<CanvasProps> = ({
     // Touch Move Handler
     const handleTouchMove = (e: TouchEvent) => {
       // Pinch to Zoom (2 fingers)
-      if (e.touches.length === 2 && initialPinchDistRef.current && initialPinchDistRef.current > 0) {
+      if (e.touches.length === 2) {
         e.preventDefault();
         const t1 = e.touches[0];
         const t2 = e.touches[1];
         const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+
+        if (!initialPinchDistRef.current || initialPinchDistRef.current <= 0) {
+          initialPinchDistRef.current = currentDist;
+          initialPinchZoomRef.current = zoom;
+          initialPinchPanRef.current = { ...pan };
+          if (containerRef.current) {
+            const rect = containerRef.current.getBoundingClientRect();
+            initialPinchCenterRef.current = {
+              x: (t1.clientX + t2.clientX) / 2 - rect.left,
+              y: (t1.clientY + t2.clientY) / 2 - rect.top,
+            };
+          }
+          setResizingNode(null);
+          resizingNodeRef.current = null;
+          setIsPanning(false);
+          isPanningRef.current = false;
+          setIsDraggingNode(false);
+          isDraggingNodeRef.current = false;
+          return;
+        }
+
         const scaleFactor = currentDist / initialPinchDistRef.current;
         const newZoom = Math.min(2.5, Math.max(0.25, initialPinchZoomRef.current * scaleFactor));
 
         const centerX = initialPinchCenterRef.current.x;
         const centerY = initialPinchCenterRef.current.y;
-        const newPanX = centerX - (centerX - initialPinchPanRef.current.x) * (newZoom / initialPinchZoomRef.current);
-        const newPanY = centerY - (centerY - initialPinchPanRef.current.y) * (newZoom / initialPinchZoomRef.current);
+        const newPanX =
+          centerX - (centerX - initialPinchPanRef.current.x) * (newZoom / initialPinchZoomRef.current);
+        const newPanY =
+          centerY - (centerY - initialPinchPanRef.current.y) * (newZoom / initialPinchZoomRef.current);
 
         onZoomChange(newZoom);
         onPanChange({ x: newPanX, y: newPanY });
@@ -453,28 +482,17 @@ export const Canvas: React.FC<CanvasProps> = ({
         const touch = e.touches[0];
 
         // 1. Resizing Node on Touch
-        if (resizingNode) {
+        const currentResize = resizingNodeRef.current;
+        if (currentResize) {
           e.preventDefault();
-          const dx = (touch.clientX - resizingNode.startScreenX) / zoom;
-          const dy = (touch.clientY - resizingNode.startScreenY) / zoom;
-          applyResize(dx, dy);
+          const dx = (touch.clientX - currentResize.startScreenX) / zoom;
+          const dy = (touch.clientY - currentResize.startScreenY) / zoom;
+          applyResize(currentResize, dx, dy);
           return;
         }
 
-        // 2. Panning Canvas on Touch
-        if (isPanning) {
-          e.preventDefault();
-          const dx = touch.clientX - panStartMousePos.current.x;
-          const dy = touch.clientY - panStartMousePos.current.y;
-          onPanChange({
-            x: initialPan.current.x + dx,
-            y: initialPan.current.y + dy,
-          });
-          return;
-        }
-
-        // 3. Dragging Nodes on Touch
-        if (isDraggingNode && initialNodePositions.current.length > 0) {
+        // 2. Dragging Nodes on Touch
+        if (isDraggingNodeRef.current && initialNodePositions.current.length > 0) {
           e.preventDefault();
           const dx = (touch.clientX - dragStartMousePos.current.x) / zoom;
           const dy = (touch.clientY - dragStartMousePos.current.y) / zoom;
@@ -492,6 +510,18 @@ export const Canvas: React.FC<CanvasProps> = ({
           });
 
           onBatchUpdateNodePositions(updatedPositions);
+          return;
+        }
+
+        // 3. Panning Canvas on Touch
+        if (isPanningRef.current) {
+          e.preventDefault();
+          const dx = touch.clientX - panStartMousePos.current.x;
+          const dy = touch.clientY - panStartMousePos.current.y;
+          onPanChange({
+            x: initialPan.current.x + dx,
+            y: initialPan.current.y + dy,
+          });
           return;
         }
 
@@ -517,18 +547,12 @@ export const Canvas: React.FC<CanvasProps> = ({
     // Touch End Handler
     const handleTouchEnd = (e: TouchEvent) => {
       initialPinchDistRef.current = null;
-
-      if (resizingNode) {
-        setResizingNode(null);
-      }
-
-      if (isPanning) {
-        setIsPanning(false);
-      }
-
-      if (isDraggingNode) {
-        setIsDraggingNode(false);
-      }
+      setResizingNode(null);
+      resizingNodeRef.current = null;
+      setIsPanning(false);
+      isPanningRef.current = false;
+      setIsDraggingNode(false);
+      isDraggingNodeRef.current = false;
 
       if (draggingPort) {
         // Complete wire connection using last known touch location
@@ -641,12 +665,14 @@ export const Canvas: React.FC<CanvasProps> = ({
         // Left click on empty space: clear selection & pan
         onClearSelection();
         setIsPanning(true);
+        isPanningRef.current = true;
         panStartMousePos.current = { x: e.clientX, y: e.clientY };
         initialPan.current = { ...pan };
       }
     } else if (e.button === 1) {
       // Middle click: pan
       setIsPanning(true);
+      isPanningRef.current = true;
       panStartMousePos.current = { x: e.clientX, y: e.clientY };
       initialPan.current = { ...pan };
     }
@@ -657,13 +683,17 @@ export const Canvas: React.FC<CanvasProps> = ({
     if (e.touches.length === 1) {
       onClearSelection();
       setIsPanning(true);
+      isPanningRef.current = true;
       panStartMousePos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
       initialPan.current = { ...pan };
       initialPinchDistRef.current = null;
     } else if (e.touches.length === 2) {
       setIsPanning(false);
+      isPanningRef.current = false;
       setIsDraggingNode(false);
+      isDraggingNodeRef.current = false;
       setResizingNode(null);
+      resizingNodeRef.current = null;
 
       const t1 = e.touches[0];
       const t2 = e.touches[1];
@@ -679,6 +709,34 @@ export const Canvas: React.FC<CanvasProps> = ({
         };
       }
     }
+  };
+
+  // Quick Scale Node (+25%, -20%)
+  const handleScaleNode = (nodeId: string, factor: number) => {
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node || !onUpdateNodeDimensions) return;
+    const newWidth = Math.max(60, Math.min(800, Math.round(node.width * factor)));
+    const newHeight = Math.max(40, Math.min(600, Math.round(node.height * factor)));
+    const dx = (newWidth - node.width) / 2;
+    const dy = (newHeight - node.height) / 2;
+    onUpdateNodeDimensions(
+      nodeId,
+      newWidth,
+      newHeight,
+      Math.round(node.x - dx),
+      Math.round(node.y - dy)
+    );
+  };
+
+  // Focus and Zoom viewport into specific Node
+  const handleFocusNode = (node: FlowNode) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const targetZoom = 1.35;
+    const newPanX = rect.width / 2 - (node.x + node.width / 2) * targetZoom;
+    const newPanY = rect.height / 2 - (node.y + node.height / 2) * targetZoom;
+    onZoomChange(targetZoom);
+    onPanChange({ x: newPanX, y: newPanY });
   };
 
   // Mini-map click to pan
@@ -710,6 +768,29 @@ export const Canvas: React.FC<CanvasProps> = ({
       onWheel={handleWheel}
       onMouseDown={handleCanvasMouseDown}
       onTouchStart={handleCanvasTouchStart}
+      onDoubleClick={(e) => {
+        if (e.target === containerRef.current || (e.target as HTMLElement)?.tagName === 'svg') {
+          if (zoom === 1) {
+            onZoomChange(1.35);
+          } else {
+            onZoomChange(1);
+          }
+        }
+      }}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('application/flowlify-node-type')) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+        }
+      }}
+      onDrop={(e) => {
+        const nodeType = e.dataTransfer.getData('application/flowlify-node-type');
+        if (nodeType && onAddNodeAt) {
+          e.preventDefault();
+          const canvasPos = screenToCanvas(e.clientX, e.clientY);
+          onAddNodeAt(nodeType as any, Math.round(canvasPos.x), Math.round(canvasPos.y));
+        }
+      }}
     >
       {/* Dynamic Grid Background */}
       {gridType !== 'none' && (
@@ -873,6 +954,8 @@ export const Canvas: React.FC<CanvasProps> = ({
             onDuplicateNode={onDuplicateNode}
             onDeleteNode={onDeleteNode}
             onOpenProperties={onOpenProperties}
+            onScaleNode={handleScaleNode}
+            onFocusNode={handleFocusNode}
             zoom={zoom}
             commentCount={commentsCountByNodeId ? commentsCountByNodeId[node.id] || 0 : undefined}
             hasUnresolvedComments={

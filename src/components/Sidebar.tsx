@@ -312,7 +312,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
             <button
               key={shape.type}
               onClick={() => onAddNode(shape.type)}
-              className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-left hover:bg-slate-50 group transition-all text-xs cursor-pointer border border-transparent hover:border-slate-200/90 hover:shadow-xs"
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('application/flowlify-node-type', shape.type);
+                e.dataTransfer.effectAllowed = 'copy';
+              }}
+              className="w-full flex items-center gap-2.5 px-2 py-1.5 rounded-md text-left hover:bg-slate-50 group transition-all text-xs cursor-pointer active:cursor-grabbing border border-transparent hover:border-slate-200/90 hover:shadow-xs"
+              title="Click to add or drag onto canvas"
             >
               <div
                 className="w-7 h-7 rounded-md bg-white border border-slate-200/90 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:border-slate-300 transition-all shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
