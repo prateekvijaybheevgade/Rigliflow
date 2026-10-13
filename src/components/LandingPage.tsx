@@ -580,7 +580,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950 border border-cyan-500/40 text-cyan-300 text-xs font-mono font-bold mb-4 shadow-sm">
                 <Compass size={14} className="text-cyan-400" />
-                <span>OMEGACAD PLUS 15.0 ENGINE</span>
+                <span>OMEGACAD PLUS CAD ENGINE</span>
               </div>
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4">
                 Precision 2D CAD & Architectural Drafting in the Browser.

@@ -120,9 +120,6 @@ export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
               <span className="font-bold text-sm tracking-tight text-slate-900">
                 OmegaCAD <span className="text-blue-600 font-extrabold">Plus</span>
               </span>
-              <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-blue-50 text-blue-700 border border-blue-200/80">
-                PRO 15.0
-              </span>
             </div>
             <span className="text-[10px] text-slate-500 -mt-0.5 font-medium hidden sm:inline">
               2D Civil & Architectural Drafting Engine
