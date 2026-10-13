@@ -258,22 +258,79 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const isArch = studioMode === 'architecture';
   const activeSamples = isArch ? ARCHITECTURAL_SAMPLES : FLOWCHART_SAMPLES;
 
-  const handleFile = (file: File) => {
+// Helper: Compress and resize uploaded image on client to fit safely within Vercel's 4.5MB payload limit
+function compressImage(
+  file: File,
+  maxDimension = 1600,
+  quality = 0.85
+): Promise<{ dataUrl: string; mimeType: string }> {
+  return new Promise((resolve) => {
+    if (file.type === 'image/svg+xml') {
+      const reader = new FileReader();
+      reader.onload = (e) =>
+        resolve({ dataUrl: e.target?.result as string, mimeType: 'image/svg+xml' });
+      reader.onerror = () => resolve({ dataUrl: '', mimeType: file.type });
+      reader.readAsDataURL(file);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const rawDataUrl = e.target?.result as string;
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return resolve({ dataUrl: rawDataUrl, mimeType: file.type });
+        }
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve({ dataUrl: canvas.toDataURL('image/jpeg', quality), mimeType: 'image/jpeg' });
+      };
+      img.onerror = () => resolve({ dataUrl: rawDataUrl, mimeType: file.type });
+      img.src = rawDataUrl;
+    };
+    reader.onerror = () => resolve({ dataUrl: '', mimeType: file.type });
+    reader.readAsDataURL(file);
+  });
+}
+
+  const handleFile = async (file: File) => {
     if (!file.type.startsWith('image/')) {
       setErrorMsg('Please upload a valid image file (PNG, JPG, WEBP, SVG).');
       return;
     }
 
     setErrorMsg(null);
-    setMimeType(file.type);
     setFileName(file.name);
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setSelectedImage(result);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const { dataUrl, mimeType: optimizedMime } = await compressImage(file);
+      setSelectedImage(dataUrl);
+      setMimeType(optimizedMime);
+    } catch {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setSelectedImage(result);
+        setMimeType(file.type);
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
