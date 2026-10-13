@@ -25,6 +25,7 @@ import {
   SampleTemplate,
 } from '../utils/samples';
 import { DiagramData } from '../types/flowchart';
+import { analyzeDiagramDirectly } from '../utils/aiVisionPrompts';
 
 export interface UploadModalProps {
   isOpen: boolean;
@@ -374,50 +375,63 @@ function compressImage(
     setErrorMsg(null);
 
     try {
-      const endpoint = isArch ? '/api/analyze-architecture' : '/api/analyze-diagram';
+      let analyzedDiagram: DiagramData;
+      const customKey = userApiKey.trim() || localStorage.getItem('flowlify_gemini_api_key') || '';
 
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          image: selectedImage,
-          imageBase64: selectedImage,
+      if (customKey) {
+        // Direct browser execution with user's Gemini key: ultra-fast, zero cloud serverless throttling
+        analyzedDiagram = await analyzeDiagramDirectly(
+          selectedImage,
           mimeType,
-          userInstructions: instructions,
-          additionalInstructions: instructions,
-          apiKey: userApiKey.trim() || undefined,
-        }),
-      });
-
-      const rawText = await response.text();
-      let resData: any = null;
-
-      try {
-        resData = JSON.parse(rawText);
-      } catch {
-        // Handle non-JSON responses like Vercel error pages or timeouts
-        if (!response.ok) {
-          if (rawText.includes('FUNCTION_INVOCATION_TIMEOUT') || response.status === 504) {
-            throw new Error('Analysis timed out on server. Please try with a smaller image or retry.');
-          }
-          if (response.status === 413 || rawText.includes('Payload Too Large')) {
-            throw new Error('Image file is too large for the server. Please try a smaller photo or crop it.');
-          }
-          const cleanSnippet = rawText.replace(/<[^>]*>/g, '').trim().slice(0, 120);
-          throw new Error(`Server returned status ${response.status}${cleanSnippet ? `: ${cleanSnippet}` : ''}. Please retry.`);
-        }
-        throw new Error('Invalid response received from server. Please retry.');
-      }
-
-      if (!response.ok) {
-        throw new Error(
-          resData?.error ||
-          resData?.message ||
-          `Failed to analyze diagram (${response.status})`
+          customKey,
+          instructions,
+          isArch
         );
+      } else {
+        const endpoint = isArch ? '/api/analyze-architecture' : '/api/analyze-diagram';
+
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            image: selectedImage,
+            imageBase64: selectedImage,
+            mimeType,
+            userInstructions: instructions,
+            additionalInstructions: instructions,
+          }),
+        });
+
+        const rawText = await response.text();
+        let resData: any = null;
+
+        try {
+          resData = JSON.parse(rawText);
+        } catch {
+          if (!response.ok) {
+            if (rawText.includes('FUNCTION_INVOCATION_TIMEOUT') || response.status === 504) {
+              throw new Error('Analysis timed out on server. Please try with a smaller image or retry.');
+            }
+            if (response.status === 413 || rawText.includes('Payload Too Large')) {
+              throw new Error('Image file is too large for the server. Please try a smaller photo or crop it.');
+            }
+            const cleanSnippet = rawText.replace(/<[^>]*>/g, '').trim().slice(0, 120);
+            throw new Error(`Server returned status ${response.status}${cleanSnippet ? `: ${cleanSnippet}` : ''}. Please retry.`);
+          }
+          throw new Error('Invalid response received from server. Please retry.');
+        }
+
+        if (!response.ok) {
+          throw new Error(
+            resData?.error ||
+            resData?.message ||
+            `Failed to analyze diagram (${response.status})`
+          );
+        }
+
+        analyzedDiagram = resData?.diagram || resData;
       }
 
-      const analyzedDiagram: DiagramData = resData?.diagram || resData;
       if (!analyzedDiagram || (!Array.isArray(analyzedDiagram.nodes) && !analyzedDiagram.title)) {
         throw new Error('Could not parse structural nodes from image. Please ensure photo is clear and retry.');
       }
