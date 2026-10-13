@@ -21,6 +21,7 @@ import { AuthModal } from './components/AuthModal';
 import { VersionHistoryDrawer } from './components/VersionHistoryDrawer';
 import { CommentsDrawer } from './components/CommentsDrawer';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
+import { OmegaCADStudio } from './components/omegacad/OmegaCADStudio';
 import { Box, Sliders, X, LayoutGrid } from 'lucide-react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import {
@@ -52,7 +53,7 @@ import {
 } from './utils/export';
 import { getDiagramBounds } from './utils/geometry';
 
-type AppView = 'landing' | 'dashboard' | 'editor';
+type AppView = 'landing' | 'dashboard' | 'editor' | 'omegacad';
 
 function FlowlifyApp() {
   const { user } = useAuth();
@@ -1070,6 +1071,7 @@ function FlowlifyApp() {
           }}
           onOpenAuthModal={() => setIsAuthModalOpen(true)}
           onGoToEditor={() => setCurrentView('editor')}
+          onGoToOmegaCad={() => setCurrentView('omegacad')}
         />
         <AuthModal
           isOpen={isAuthModalOpen}
@@ -1096,6 +1098,7 @@ function FlowlifyApp() {
           onLoadSample={handleLoadSample}
           onGoToLanding={() => setCurrentView('landing')}
           onGoToEditor={() => setCurrentView('editor')}
+          onGoToOmegaCad={() => setCurrentView('omegacad')}
         />
 
         <UploadModal
@@ -1105,6 +1108,16 @@ function FlowlifyApp() {
           initialMode={diagram.studioMode || 'flowchart'}
         />
       </>
+    );
+  }
+
+  // VIEW 4: OMEGACAD PLUS STUDIO (Dedicated 2D CAD & Architectural Drafting Engine)
+  if (currentView === 'omegacad') {
+    return (
+      <OmegaCADStudio
+        onBackToHome={() => setCurrentView('landing')}
+        onBackToDashboard={() => setCurrentView('dashboard')}
+      />
     );
   }
 
@@ -1160,6 +1173,7 @@ function FlowlifyApp() {
         mobileSidebarOpen={mobileSidebarOpen}
         mobilePropertiesOpen={mobilePropertiesOpen}
         onToggleStudioMode={handleToggleStudioMode}
+        onGoToOmegaCad={() => setCurrentView('omegacad')}
       />
 
       {/* Main Studio Work Area */}

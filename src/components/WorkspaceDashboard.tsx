@@ -48,6 +48,7 @@ interface WorkspaceDashboardProps {
   onLoadSample: (sample: SampleTemplate) => void;
   onGoToLanding: () => void;
   onGoToEditor?: () => void;
+  onGoToOmegaCad?: () => void;
   activeDiagramTitle?: string;
 }
 
@@ -94,6 +95,7 @@ export const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
   onLoadSample,
   onGoToLanding,
   onGoToEditor,
+  onGoToOmegaCad,
   activeDiagramTitle,
 }) => {
   const { user, logout } = useAuth();
@@ -286,6 +288,23 @@ export const WorkspaceDashboard: React.FC<WorkspaceDashboardProps> = ({
                   </span>
                 </div>
                 <ArrowRight size={13} className="text-slate-400 group-hover:text-blue-600 shrink-0 transition-transform group-hover:translate-x-0.5" />
+              </button>
+            )}
+
+            {/* OmegaCAD Plus CAD Studio Launcher */}
+            {onGoToOmegaCad && (
+              <button
+                onClick={onGoToOmegaCad}
+                className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-cyan-900 bg-cyan-50/90 hover:bg-cyan-100 border border-cyan-200 transition-colors cursor-pointer group my-1 shadow-xs"
+                title="Launch OmegaCAD Plus 2D CAD & Architectural Studio"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <Compass size={15} className="text-cyan-600 group-hover:rotate-45 transition-transform shrink-0" />
+                  <span className="truncate">OmegaCAD Plus Studio</span>
+                </div>
+                <span className="text-[9px] font-bold bg-cyan-600 text-white px-1.5 py-0.2 rounded shrink-0">
+                  CAD
+                </span>
               </button>
             )}
 

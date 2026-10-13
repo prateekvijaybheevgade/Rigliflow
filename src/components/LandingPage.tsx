@@ -19,6 +19,7 @@ import {
   Menu,
   X,
   Layout,
+  Compass,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { SignInButton, SignUpButton, UserButton, Show } from '@clerk/react';
@@ -28,12 +29,14 @@ interface LandingPageProps {
   onLaunchPlatform: () => void;
   onOpenAuthModal: () => void;
   onGoToEditor?: () => void;
+  onGoToOmegaCad?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
   onLaunchPlatform,
   onOpenAuthModal,
   onGoToEditor,
+  onGoToOmegaCad,
 }) => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'flowchart' | 'whiteboard'>('flowchart');
@@ -95,13 +98,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             onClick={() => scrollToSection('#architecture')}
             className="px-3 py-1.5 rounded-lg hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap cursor-pointer"
           >
-            Architecture
+            OmegaCAD
           </button>
           <button
             onClick={() => scrollToSection('#pricing')}
             className="px-3 py-1.5 rounded-lg hover:text-slate-900 hover:bg-slate-100 transition-colors whitespace-nowrap cursor-pointer"
           >
             Pricing
+          </button>
+          <button
+            onClick={onGoToOmegaCad}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-cyan-800 bg-cyan-50 hover:bg-cyan-100 border border-cyan-300 transition-all whitespace-nowrap cursor-pointer shadow-xs group"
+          >
+            <Compass size={14} className="text-cyan-600 group-hover:rotate-45 transition-transform" />
+            <span className="font-bold">OmegaCAD Plus</span>
+            <span className="text-[9px] font-bold bg-cyan-600 text-white px-1.5 py-0.2 rounded">
+              CAD STUDIO
+            </span>
           </button>
         </nav>
 
@@ -554,6 +567,73 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </button>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* 5.5 OMEGACAD PLUS ARCHITECTURAL & CIVIL SHOWCASE */}
+      <section id="architecture" className="py-20 bg-[#0B1E36] text-white px-6 lg:px-12 border-t border-slate-800 relative overflow-hidden">
+        {/* Background Cad Grid Subtle Accent */}
+        <div className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(#38BDF8_1px,transparent_1px)] [background-size:24px_24px]" />
+
+        <div className="max-w-7xl mx-auto relative z-10">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-10 mb-16">
+            <div className="max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950 border border-cyan-500/40 text-cyan-300 text-xs font-mono font-bold mb-4 shadow-sm">
+                <Compass size={14} className="text-cyan-400" />
+                <span>OMEGACAD PLUS 15.0 ENGINE</span>
+              </div>
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight text-white mb-4">
+                Precision 2D CAD & Architectural Drafting in the Browser.
+              </h2>
+              <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+                Reverse-engineer hand-drawn paper sketches, blueprints, and whiteboard floor plans into production-ready 2D CAD layouts in seconds. Features real-world millimeter scaling, ISO 13567 layers, orthogonal snap, and native AutoCAD/IntelliCAD DXF export.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <button
+                onClick={onGoToOmegaCad}
+                className="flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-sm px-6 py-3.5 rounded-xl shadow-lg shadow-cyan-950 hover:shadow-cyan-900 transition-all cursor-pointer"
+              >
+                <Compass size={18} />
+                <span>Launch OmegaCAD Plus Studio</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* 3 Value Columns */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur-md space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-cyan-950 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold">
+                01
+              </div>
+              <h3 className="text-base font-bold text-white">AI Sketch-to-CAD Scanner</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Photograph any paper blueprint or napkin floor plan. Our Gemini Vision model automatically detects walls, doors, windows, room areas, and dimensions into editable CAD geometry.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur-md space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-cyan-950 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold">
+                02
+              </div>
+              <h3 className="text-base font-bold text-white">AutoCAD & IntelliCAD .DXF Export</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                1-click download compliant ASCII DXF vector drawings organized into standard CAD layers (A-WALL, A-DOOR, A-DIMS). Open directly in AutoCAD, CMS IntelliCAD, Revit, or Rhino.
+              </p>
+            </div>
+
+            <div className="p-6 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur-md space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-cyan-950 border border-cyan-500/30 flex items-center justify-center text-cyan-400 font-bold">
+                03
+              </div>
+              <h3 className="text-base font-bold text-white">Infinite Crosshairs & ISO Layers</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
+                Full-screen CAD crosshairs with real-time digital coordinate HUD (WCS), 90° Ortho mode locking (F8), wall hatch fills, and live metric m² / sq ft room area calculators.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 

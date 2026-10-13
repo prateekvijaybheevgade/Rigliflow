@@ -94,6 +94,7 @@ interface ToolbarProps {
   mobileSidebarOpen?: boolean;
   mobilePropertiesOpen?: boolean;
   onToggleStudioMode?: (mode: 'flowchart' | 'architecture') => void;
+  onGoToOmegaCad?: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -144,6 +145,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   mobileSidebarOpen = false,
   mobilePropertiesOpen = false,
   onToggleStudioMode,
+  onGoToOmegaCad,
 }) => {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isSamplesOpen, setIsSamplesOpen] = useState(false);
@@ -416,6 +418,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <Sparkles size={13} className="text-indigo-600" />
             <span>AI Prompt</span>
           </button>
+
+          {/* OmegaCAD Plus CAD Studio Switcher */}
+          {onGoToOmegaCad && (
+            <button
+              onClick={onGoToOmegaCad}
+              className="hidden lg:flex items-center gap-1.5 text-cyan-900 hover:text-cyan-950 bg-cyan-50/80 hover:bg-cyan-100 text-xs font-semibold px-2.5 py-1.5 rounded-md border border-cyan-200/80 transition-all cursor-pointer shadow-2xs group"
+              title="Open OmegaCAD Plus 2D CAD & Architectural Studio"
+            >
+              <Compass size={13} className="text-cyan-600 group-hover:rotate-45 transition-transform" />
+              <span>OmegaCAD Plus</span>
+            </button>
+          )}
 
           {/* Template Gallery Dropdown */}
           <div className="relative hidden xl:block">
