@@ -3,7 +3,22 @@ import {
   CadDrawing,
   CadEntity,
 } from '../../types/omegacad';
-import { RotateCw, Copy, Trash2, Maximize2, ZoomIn, ZoomOut, Compass } from 'lucide-react';
+import {
+  RotateCw,
+  Copy,
+  Trash2,
+  Maximize2,
+  ZoomIn,
+  ZoomOut,
+  Compass,
+  Ruler,
+  Sliders,
+  Move,
+  FlipHorizontal,
+  FlipVertical,
+  Grid,
+} from 'lucide-react';
+import { OmegaCADMicroTools } from './OmegaCADMicroTools';
 
 interface OmegaCADCanvasProps {
   drawing: CadDrawing;
@@ -19,6 +34,13 @@ interface OmegaCADCanvasProps {
   orthoMode: boolean;
   canvasTheme?: 'light' | 'blueprint';
   onZoomFit?: () => void;
+  // Micro-tools callbacks
+  onOffsetEntity?: (distanceMm: number) => void;
+  onMirrorEntity?: (axis: 'horizontal' | 'vertical') => void;
+  onArrayEntity?: (count: number, spacingMm: number) => void;
+  onAutoDimension?: () => void;
+  onIsolateLayer?: (layerId: string) => void;
+  onRestoreAllLayers?: () => void;
 }
 
 export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
@@ -35,6 +57,12 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
   orthoMode,
   canvasTheme = 'light',
   onZoomFit,
+  onOffsetEntity,
+  onMirrorEntity,
+  onArrayEntity,
+  onAutoDimension,
+  onIsolateLayer,
+  onRestoreAllLayers,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [pan, setPan] = useState({ x: 80, y: 60 });
@@ -48,6 +76,10 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
 
   // Crosshair coordinates
   const [cursorPos, setCursorPos] = useState({ screenX: 0, screenY: 0, cadX: 0, cadY: 0 });
+
+  // Interactive Measurement Tape Mode
+  const [measureMode, setMeasureMode] = useState(false);
+  const [measureStart, setMeasureStart] = useState<{ x: number; y: number } | null>(null);
 
   // Entity Dragging
   const [draggingEntityId, setDraggingEntityId] = useState<string | null>(null);
@@ -76,7 +108,7 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
     [pan, zoom]
   );
 
-  // Track cursor position for crosshairs and HUD
+  // Track cursor position for crosshairs, HUD, and tape measure
   const handleMouseMove = (e: React.MouseEvent) => {
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -141,6 +173,17 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    // Measure tape click handler
+    if (measureMode) {
+      if (!measureStart) {
+        setMeasureStart({ x: cursorPos.screenX, y: cursorPos.screenY });
+      } else {
+        // Measure finished
+        setMeasureStart(null);
+      }
+      return;
+    }
+
     // Middle click or canvas click pans canvas
     if (e.button === 1 || e.target === containerRef.current || (e.target as HTMLElement).id === 'cad-canvas-bg') {
       setIsPanning(true);
@@ -188,12 +231,17 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
         if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
         onDeleteEntity(selectedEntityId);
       } else if (e.key === 'Escape') {
-        onSelectEntity(null);
+        if (measureMode) {
+          setMeasureMode(false);
+          setMeasureStart(null);
+        } else {
+          onSelectEntity(null);
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedEntityId, onDeleteEntity, onSelectEntity]);
+  }, [selectedEntityId, onDeleteEntity, onSelectEntity, measureMode]);
 
   // Filter visible entities by layer visibility
   const visibleEntities = drawing.entities.filter((entity) => {
@@ -202,12 +250,7 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
   });
 
   const isDark = canvasTheme === 'blueprint';
-  const bgColor = isDark ? '#0B1E36' : '#F8FAFC';
-  const gridLineMajor = isDark ? '#1E3A5F' : '#E2E8F0';
-  const gridLineMinor = isDark ? '#112744' : '#F1F5F9';
-  const textColor = isDark ? '#F1F5F9' : '#0F172A';
-
-  const selectedEntity = drawing.entities.find((e) => e.id === selectedEntityId);
+  const selectedEntity = drawing.entities.find((e) => e.id === selectedEntityId) || null;
 
   return (
     <div
@@ -230,30 +273,22 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
       {/* 1. SVG PATTERN DEFINITIONS */}
       <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
         <defs>
-          {/* Concrete Cross-Hatch (Light Theme) */}
           <pattern id="concreteHatchLight" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
             <line x1="0" y1="0" x2="0" y2="16" stroke="#475569" strokeWidth="1.2" strokeOpacity="0.4" />
             <line x1="8" y1="0" x2="8" y2="16" stroke="#475569" strokeWidth="0.8" strokeOpacity="0.3" strokeDasharray="3,3" />
           </pattern>
-
-          {/* Concrete Cross-Hatch (Blueprint Theme) */}
           <pattern id="concreteHatchBlueprint" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
             <line x1="0" y1="0" x2="0" y2="16" stroke="#38BDF8" strokeWidth="1.2" strokeOpacity="0.5" />
             <line x1="8" y1="0" x2="8" y2="16" stroke="#38BDF8" strokeWidth="0.8" strokeOpacity="0.3" strokeDasharray="3,3" />
           </pattern>
-
-          {/* Brick Hatch (Light Theme) */}
           <pattern id="brickHatchLight" width="20" height="10" patternUnits="userSpaceOnUse">
             <line x1="0" y1="0" x2="20" y2="0" stroke="#64748B" strokeWidth="1" strokeOpacity="0.4" />
             <line x1="0" y1="5" x2="20" y2="5" stroke="#64748B" strokeWidth="1" strokeOpacity="0.4" />
-            <line x1="0" y1="0" x2="0" y2="5" stroke="#64748B" strokeWidth="1" strokeOpacity="0.4" />
             <line x1="10" y1="5" x2="10" y2="10" stroke="#64748B" strokeWidth="1" strokeOpacity="0.4" />
           </pattern>
-
-          {/* Arrowhead marker for dimensions */}
-          <marker id="cad-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill={isDark ? '#38BDF8' : '#2563EB'} />
-          </marker>
+          <pattern id="poolWaveHatch" width="24" height="12" patternUnits="userSpaceOnUse">
+            <path d="M 0 6 Q 6 0 12 6 T 24 6" fill="none" stroke="#0284C7" strokeWidth="1.2" strokeOpacity="0.5" />
+          </pattern>
         </defs>
       </svg>
 
@@ -273,7 +308,63 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
         />
       </div>
 
-      {/* 3. CAD WORLD VIEWPORT CANVAS */}
+      {/* 3. FLOATING MICRO-TOOLS PALETTE (Top Center) */}
+      <OmegaCADMicroTools
+        drawing={drawing}
+        selectedEntity={selectedEntity}
+        onOffsetEntity={onOffsetEntity}
+        onMirrorEntity={onMirrorEntity}
+        onArrayEntity={onArrayEntity}
+        onAutoDimension={onAutoDimension}
+        onRotateEntity={(deg) => selectedEntity && onRotateEntity(selectedEntity.id)}
+        onIsolateLayer={onIsolateLayer}
+        onRestoreAllLayers={onRestoreAllLayers}
+        activeMeasureMode={measureMode}
+        onToggleMeasureMode={() => {
+          setMeasureMode(!measureMode);
+          setMeasureStart(null);
+        }}
+      />
+
+      {/* 4. INTERACTIVE TAPE MEASURE LIVE RULER */}
+      {measureMode && measureStart && (
+        <div className="absolute inset-0 pointer-events-none z-30">
+          <svg className="w-full h-full">
+            <line
+              x1={measureStart.x}
+              y1={measureStart.y}
+              x2={cursorPos.screenX}
+              y2={cursorPos.screenY}
+              stroke="#2563EB"
+              strokeWidth="2"
+              strokeDasharray="5,4"
+            />
+            <circle cx={measureStart.x} cy={measureStart.y} r="4" fill="#2563EB" />
+            <circle cx={cursorPos.screenX} cy={cursorPos.screenY} r="4" fill="#2563EB" />
+          </svg>
+          {(() => {
+            const dx = (cursorPos.screenX - measureStart.x) / zoom * 10;
+            const dy = (cursorPos.screenY - measureStart.y) / zoom * 10;
+            const distMm = Math.round(Math.sqrt(dx * dx + dy * dy));
+            const distM = (distMm / 1000).toFixed(2);
+            const distFt = (distMm / 304.8).toFixed(1);
+            const midX = (measureStart.x + cursorPos.screenX) / 2;
+            const midY = (measureStart.y + cursorPos.screenY) / 2;
+
+            return (
+              <div
+                className="absolute bg-blue-600 text-white font-mono text-xs font-bold px-2 py-1 rounded-md shadow-lg -translate-x-1/2 -translate-y-1/2 flex items-center gap-1.5"
+                style={{ left: `${midX}px`, top: `${midY - 14}px` }}
+              >
+                <Ruler size={12} />
+                <span>{distM} m ({distFt} ft)</span>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* 5. CAD WORLD VIEWPORT CANVAS */}
       <div
         id="cad-canvas-bg"
         className="absolute origin-top-left"
@@ -291,7 +382,7 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
           <span className="absolute left-0 top-12 text-[10px] font-mono font-bold text-green-500">Y</span>
         </div>
 
-        {/* ENTITIES RENDERER */}
+        {/* ENTITIES RENDERER (100+ Professional CAD Elements) */}
         {visibleEntities.map((entity) => {
           const isSelected = entity.id === selectedEntityId;
           const rotation = entity.rotation || 0;
@@ -301,10 +392,10 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
               key={entity.id}
               onClick={(e) => {
                 e.stopPropagation();
-                onSelectEntity(entity.id);
+                if (!measureMode) onSelectEntity(entity.id);
               }}
               onMouseDown={(e) => {
-                if (e.button !== 0) return;
+                if (measureMode || e.button !== 0) return;
                 e.stopPropagation();
                 onSelectEntity(entity.id);
                 setDraggingEntityId(entity.id);
@@ -332,11 +423,13 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
                   : 'hover:ring-1 hover:ring-blue-400 cursor-pointer z-10'
               }`}
             >
-              {/* === ENTITY TYPE 1: ARCH WALL === */}
+              {/* === 1. ARCH WALL === */}
               {entity.type === 'arch_wall' && (
                 <div
                   className={`w-full h-full relative overflow-hidden shadow-xs border ${
-                    isDark
+                    entity.wallHatch === 'glass'
+                      ? 'border-sky-400 bg-sky-100/50'
+                      : isDark
                       ? 'border-cyan-400 bg-slate-900'
                       : 'border-slate-800 bg-slate-700'
                   }`}
@@ -354,7 +447,6 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
                       }
                     />
                   </svg>
-                  {/* Clean Centered Dimension Tag */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-1">
                     <span
                       className={`text-[9.5px] font-mono font-bold truncate max-w-[90%] px-1.5 py-0.2 rounded shadow-xs ${
@@ -369,16 +461,13 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
                 </div>
               )}
 
-              {/* === ENTITY TYPE 2: ARCH SWING DOOR === */}
+              {/* === 2. ARCH DOOR === */}
               {entity.type === 'arch_door' && (
                 <div className="w-full h-full relative">
                   <svg className="w-full h-full overflow-visible">
-                    {/* Wall Jambs */}
                     <rect x="0" y={entity.height - 8} width="6" height="8" fill={isDark ? '#F59E0B' : '#1E293B'} />
                     <rect x={entity.width - 6} y={entity.height - 8} width="6" height="8" fill={isDark ? '#F59E0B' : '#1E293B'} />
-                    {/* Sill Guide line */}
                     <line x1="0" y1={entity.height - 4} x2={entity.width} y2={entity.height - 4} stroke="#94A3B8" strokeWidth="1" strokeDasharray="3,3" />
-                    {/* 90-degree Door Swing Arc */}
                     <path
                       d={`M ${entity.width - 6} ${entity.height - 6} A ${entity.width - 12} ${entity.height - 12} 0 0 0 6 6`}
                       fill="none"
@@ -386,7 +475,6 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
                       strokeWidth="1.5"
                       strokeDasharray="4,3"
                     />
-                    {/* Door Leaf (Thick panel line) */}
                     <line
                       x1="6"
                       y1={entity.height - 6}
@@ -396,7 +484,6 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
                       strokeWidth="3.5"
                       strokeLinecap="round"
                     />
-                    {/* Pivot Hinge Dot */}
                     <circle cx="6" cy={entity.height - 6} r="2.5" fill={isDark ? '#F59E0B' : '#1E293B'} />
                   </svg>
                   <span
@@ -411,7 +498,7 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
                 </div>
               )}
 
-              {/* === ENTITY TYPE 3: ARCH WINDOW === */}
+              {/* === 3. ARCH WINDOW === */}
               {entity.type === 'arch_window' && (
                 <div
                   className={`w-full h-full relative flex items-center justify-center border shadow-xs ${
@@ -420,12 +507,10 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
                       : 'bg-sky-50 border-sky-500'
                   }`}
                 >
-                  {/* Central double glazing lines */}
                   <div className="w-full flex flex-col items-center justify-center gap-1">
                     <div className="w-full h-0.5 bg-sky-500 shadow-xs" />
                     <div className="w-full h-0.5 bg-sky-400 shadow-xs" />
                   </div>
-                  {/* Jamb Caps */}
                   <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-slate-800" />
                   <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-slate-800" />
                   <span
@@ -440,25 +525,23 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
                 </div>
               )}
 
-              {/* === ENTITY TYPE 4: STRUCTURAL COLUMN === */}
+              {/* === 4. ARCH COLUMN === */}
               {entity.type === 'arch_column' && (
                 <div
                   className={`w-full h-full relative flex items-center justify-center shadow-md border ${
+                    entity.columnShape === 'circle' ? 'rounded-full' : ''
+                  } ${
                     isDark
                       ? 'bg-slate-950 border-rose-500'
                       : 'bg-slate-900 border-slate-950'
                   }`}
                 >
-                  {/* Diagonal Civil Cross Bracing */}
-                  <svg className="w-full h-full absolute inset-0">
-                    <line x1="2" y1="2" x2={entity.width - 2} y2={entity.height - 2} stroke="#EF4444" strokeWidth="1.5" />
-                    <line x1={entity.width - 2} y1="2" x2="2" y2={entity.height - 2} stroke="#EF4444" strokeWidth="1.5" />
-                  </svg>
-                  {/* 4 Rebar Corner Dots */}
-                  <div className="absolute left-1 top-1 w-1.5 h-1.5 bg-rose-400 rounded-full" />
-                  <div className="absolute right-1 top-1 w-1.5 h-1.5 bg-rose-400 rounded-full" />
-                  <div className="absolute left-1 bottom-1 w-1.5 h-1.5 bg-rose-400 rounded-full" />
-                  <div className="absolute right-1 bottom-1 w-1.5 h-1.5 bg-rose-400 rounded-full" />
+                  {entity.columnShape !== 'circle' && (
+                    <svg className="w-full h-full absolute inset-0">
+                      <line x1="2" y1="2" x2={entity.width - 2} y2={entity.height - 2} stroke="#EF4444" strokeWidth="1.5" />
+                      <line x1={entity.width - 2} y1="2" x2="2" y2={entity.height - 2} stroke="#EF4444" strokeWidth="1.5" />
+                    </svg>
+                  )}
                   <span
                     className={`absolute -bottom-3 text-[9px] font-mono font-bold px-1 rounded shadow-xs ${
                       isDark
@@ -471,7 +554,34 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
                 </div>
               )}
 
-              {/* === ENTITY TYPE 5: ROOM ENCLOSURE === */}
+              {/* === 5. ARCH BEAM === */}
+              {entity.type === 'arch_beam' && (
+                <div className="w-full h-full border-2 border-dashed border-slate-500 bg-slate-400/10 flex items-center justify-center">
+                  <span className="text-[9px] font-mono font-bold text-slate-600 bg-white/90 px-1 rounded">
+                    {entity.label}
+                  </span>
+                </div>
+              )}
+
+              {/* === 6. ARCH STAIRCASE === */}
+              {entity.type === 'arch_stair' && (
+                <div className="w-full h-full relative border-2 border-amber-600 bg-amber-50/20 overflow-hidden flex flex-col justify-between p-1">
+                  {/* Treads */}
+                  <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-60">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => (
+                      <div key={i} className="w-full h-px bg-amber-600" />
+                    ))}
+                  </div>
+                  <div className="z-10 flex items-center justify-between">
+                    <span className="text-[9px] font-bold text-amber-800 bg-white/90 px-1 rounded">
+                      {entity.label}
+                    </span>
+                    <span className="text-[9px] font-bold text-amber-600">UP ↑</span>
+                  </div>
+                </div>
+              )}
+
+              {/* === 7. ARCH ROOM ZONE === */}
               {entity.type === 'arch_room' && (
                 <div
                   className={`w-full h-full relative flex flex-col items-center justify-center p-3 text-center border-2 border-dashed transition-all ${
@@ -510,14 +620,93 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
                 </div>
               )}
 
-              {/* === ENTITY TYPE 6: DIMENSION SPAN === */}
+              {/* === 8. ARCH SANITARY / PLUMBING === */}
+              {entity.type === 'arch_sanitary' && (
+                <div className="w-full h-full relative border-2 border-cyan-600 rounded bg-cyan-50/60 p-1 flex flex-col items-center justify-between shadow-xs">
+                  {entity.sanitaryType === 'toilet' ? (
+                    <>
+                      <div className="w-3/4 h-3 bg-cyan-200 border border-cyan-600 rounded-sm" />
+                      <div className="w-4/5 h-3/5 border-2 border-cyan-600 rounded-full bg-white flex items-center justify-center">
+                        <div className="w-1.5 h-1.5 bg-cyan-600 rounded-full" />
+                      </div>
+                    </>
+                  ) : entity.sanitaryType === 'bathtub' ? (
+                    <div className="w-full h-full border-2 border-cyan-600 rounded-xl bg-white flex items-center justify-end pr-2">
+                      <div className="w-2.5 h-2.5 rounded-full border border-cyan-600 bg-cyan-100" />
+                    </div>
+                  ) : (
+                    <div className="w-full h-full border border-cyan-600 rounded bg-white flex flex-col items-center justify-center">
+                      <div className="w-3/4 h-3/4 border border-cyan-500 rounded-full bg-cyan-50" />
+                    </div>
+                  )}
+                  <span className="text-[8.5px] font-bold text-cyan-900 truncate max-w-[95%]">
+                    {entity.label}
+                  </span>
+                </div>
+              )}
+
+              {/* === 9. ARCH ELECTRICAL / MEP === */}
+              {entity.type === 'arch_electrical' && (
+                <div className="w-full h-full relative border border-amber-500 rounded bg-amber-50/80 p-1 flex flex-col items-center justify-center shadow-xs">
+                  <div className="w-3 h-3 rounded-full border-2 border-amber-600 bg-amber-300 flex items-center justify-center text-[8px] font-bold text-amber-900">
+                    ⚡
+                  </div>
+                  <span className="text-[8px] font-bold text-amber-900 truncate max-w-[95%] mt-0.5">
+                    {entity.label}
+                  </span>
+                </div>
+              )}
+
+              {/* === 10. ARCH SITE & LANDSCAPE === */}
+              {entity.type === 'arch_site' && (
+                <div
+                  className={`w-full h-full relative border-2 border-emerald-600 ${
+                    entity.siteType === 'tree' || entity.siteType === 'palm' ? 'rounded-full bg-emerald-50/50' : 'rounded bg-emerald-50/20'
+                  } p-1 flex flex-col items-center justify-center shadow-xs overflow-hidden`}
+                >
+                  {entity.siteType === 'pool' ? (
+                    <svg className="absolute inset-0 w-full h-full">
+                      <rect width="100%" height="100%" fill="url(#poolWaveHatch)" />
+                    </svg>
+                  ) : null}
+                  <span className="text-[9px] font-bold text-emerald-800 bg-white/90 px-1 rounded z-10 truncate max-w-[95%]">
+                    {entity.label}
+                  </span>
+                </div>
+              )}
+
+              {/* === 11. ARCH SCHEDULE & NOTES === */}
+              {entity.type === 'arch_schedule' && (
+                <div className="w-full h-full border-2 border-slate-700 bg-white p-2 flex flex-col justify-between shadow-md text-xs">
+                  <div className="font-bold text-slate-900 border-b pb-1 text-[10.5px]">
+                    {entity.label}
+                  </div>
+                  <div className="space-y-1 text-[9px] text-slate-500 font-mono py-1">
+                    <div className="flex justify-between border-b pb-0.5">
+                      <span>MARK</span>
+                      <span>SIZE (mm)</span>
+                      <span>QTY</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>D1</span>
+                      <span>1000 × 2100</span>
+                      <span>1</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>W1</span>
+                      <span>1800 × 1200</span>
+                      <span>2</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* === 12. ARCH DIMENSION SPAN === */}
               {entity.type === 'arch_dimension' && (
                 <div className="w-full h-full relative flex items-center justify-center pointer-events-none">
                   <svg className="w-full h-full overflow-visible">
-                    {/* Left & Right Witness Lines */}
                     <line x1="0" y1="0" x2="0" y2={entity.height} stroke={isDark ? '#38BDF8' : '#2563EB'} strokeWidth="1.2" />
                     <line x1={entity.width} y1="0" x2={entity.width} y2={entity.height} stroke={isDark ? '#38BDF8' : '#2563EB'} strokeWidth="1.2" />
-                    {/* Horizontal Main Dimension Line */}
                     <line
                       x1="0"
                       y1={entity.height / 2}
@@ -526,7 +715,6 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
                       stroke={isDark ? '#38BDF8' : '#2563EB'}
                       strokeWidth="1.5"
                     />
-                    {/* Architectural 45-degree slash ticks */}
                     <line x1="-4" y1={entity.height / 2 + 4} x2="4" y2={entity.height / 2 - 4} stroke={isDark ? '#38BDF8' : '#2563EB'} strokeWidth="2" />
                     <line x1={entity.width - 4} y1={entity.height / 2 + 4} x2={entity.width + 4} y2={entity.height / 2 - 4} stroke={isDark ? '#38BDF8' : '#2563EB'} strokeWidth="2" />
                   </svg>
@@ -542,7 +730,7 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
                 </div>
               )}
 
-              {/* === ENTITY TYPE 7: FURNITURE BLOCK === */}
+              {/* === 13. ARCH FURNITURE === */}
               {entity.type === 'arch_furniture' && (
                 <div
                   className={`w-full h-full relative border-2 rounded p-1 flex flex-col items-center justify-between shadow-xs ${
@@ -551,7 +739,6 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
                       : 'border-slate-400 bg-white text-slate-700'
                   }`}
                 >
-                  {/* Pillow Blocks */}
                   <div className="w-full flex gap-1 justify-center pt-1">
                     <div className="w-2/5 h-4 border border-slate-400 rounded-sm bg-slate-100" />
                     <div className="w-2/5 h-4 border border-slate-400 rounded-sm bg-slate-100" />
@@ -563,7 +750,7 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
                 </div>
               )}
 
-              {/* === ENTITY TYPE 8: TITLE BLOCK === */}
+              {/* === 14. ARCH TITLE BLOCK === */}
               {entity.type === 'arch_titleblock' && (
                 <div
                   className={`w-full h-full border-2 p-2 flex flex-col justify-between shadow-md ${
@@ -644,7 +831,7 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
         })}
       </div>
 
-      {/* 4. SELECTED ENTITY FLOATING QUICK ACTION DOCK */}
+      {/* 6. SELECTED ENTITY FLOATING QUICK ACTION DOCK */}
       {selectedEntity && (
         <div
           className="absolute z-30 flex items-center gap-1 bg-white/95 backdrop-blur-md px-2 py-1 rounded-xl border border-slate-200/90 shadow-lg text-xs select-none"
@@ -681,7 +868,7 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
         </div>
       )}
 
-      {/* 5. FLOATING CANVAS NAVIGATION DOCK (Bottom-Left matching Flowlify Canvas) */}
+      {/* 7. FLOATING CANVAS NAVIGATION DOCK (Bottom-Left matching Flowlify Canvas) */}
       <div className="absolute bottom-3 left-3 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-md px-2 py-1.5 rounded-xl border border-slate-200/90 shadow-md text-xs select-none">
         <button
           onClick={() => onZoomChange(Math.max(0.25, zoom - 0.15))}
@@ -718,7 +905,7 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
         )}
       </div>
 
-      {/* 6. FLOATING LIVE COORDINATES HUD (Bottom-Center Pill) */}
+      {/* 8. FLOATING LIVE COORDINATES HUD (Bottom-Center Pill) */}
       <div className="absolute bottom-3 right-3 z-30 hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-1 rounded-xl border border-slate-200/90 shadow-md text-xs font-mono text-slate-600 select-none">
         <Compass size={13} className="text-blue-600" />
         <span>X: {cursorPos.cadX.toLocaleString()} mm</span>

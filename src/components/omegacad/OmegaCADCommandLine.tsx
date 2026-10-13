@@ -38,10 +38,14 @@ export const OmegaCADCommandLine: React.FC<OmegaCADCommandLineProps> = ({
     { label: 'DOOR', cmd: 'DOOR', desc: 'Add Door' },
     { label: 'WIN', cmd: 'WINDOW', desc: 'Add Window' },
     { label: 'COL', cmd: 'COL', desc: 'Add Column' },
+    { label: 'STAIR', cmd: 'STAIR', desc: 'Add Staircase' },
     { label: 'ROOM', cmd: 'ROOM', desc: 'Add Room' },
     { label: 'DIM', cmd: 'DIM', desc: 'Add Dimension' },
-    { label: 'RO', cmd: 'ROTATE', desc: 'Rotate 90°' },
-    { label: 'DXF', cmd: 'DXF', desc: 'Export DXF' },
+    { label: 'OFFSET', cmd: 'OFFSET', desc: 'Parallel Wall Offset' },
+    { label: 'MIRROR', cmd: 'MIRROR', desc: 'Mirror Flip' },
+    { label: 'ARRAY', cmd: 'ARRAY', desc: 'Linear Repeat Array' },
+    { label: 'AUTODIM', cmd: 'AUTODIM', desc: 'Auto-Dimension Floor Plan' },
+    { label: 'DXF', cmd: 'DXF', desc: 'Export AutoCAD DXF' },
   ];
 
   return (
@@ -57,7 +61,7 @@ export const OmegaCADCommandLine: React.FC<OmegaCADCommandLineProps> = ({
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type command (WALL, DOOR, WIN, COL, ROOM, DIM, RO, DXF, HELP)..."
+          placeholder="Type command (WALL, DOOR, WIN, COL, STAIR, OFFSET, MIRROR, ARRAY, AUTODIM, DXF, HELP)..."
           className="flex-1 bg-transparent text-xs text-slate-800 placeholder-slate-400 focus:outline-none font-mono min-w-0"
         />
         <button
@@ -101,7 +105,7 @@ export const OmegaCADCommandLine: React.FC<OmegaCADCommandLineProps> = ({
         <span aria-hidden="true">·</span>
         <span>SNAP: 10mm</span>
         <span aria-hidden="true">·</span>
-        <span className="text-slate-600 font-medium">AutoCAD 2026 Compatible</span>
+        <span className="text-slate-600 font-medium">100+ CAD Tools Active</span>
       </div>
     </footer>
   );

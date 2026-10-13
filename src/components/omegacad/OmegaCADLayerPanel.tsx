@@ -20,6 +20,9 @@ import {
   DoorOpen,
   Split,
   Columns,
+  Zap,
+  Bath,
+  Trees,
 } from 'lucide-react';
 import { CadDrawing, CadEntity, CadLayer } from '../../types/omegacad';
 
@@ -346,6 +349,9 @@ export const OmegaCADLayerPanel: React.FC<OmegaCADLayerPanelProps> = ({
                         <option value="concrete">Concrete Cross-Hatch</option>
                         <option value="brick">Masonry Brick Hatch</option>
                         <option value="solid">Solid Infill</option>
+                        <option value="cavity">Thermal Cavity</option>
+                        <option value="glass">Curtain Glass</option>
+                        <option value="drywall">Drywall Stud</option>
                       </select>
                     </div>
                   </div>
@@ -364,6 +370,24 @@ export const OmegaCADLayerPanel: React.FC<OmegaCADLayerPanelProps> = ({
                         onUpdateEntity(selectedEntity.id, { roomArea: e.target.value })
                       }
                       placeholder="e.g. 22.5 m² (242 sq ft)"
+                      className="w-full px-2 py-1 text-xs bg-white border border-blue-200 rounded font-semibold text-blue-900 focus:outline-none"
+                    />
+                  </div>
+                )}
+
+                {/* Dimension Specific Text */}
+                {selectedEntity.type === 'arch_dimension' && (
+                  <div className="p-2.5 rounded-lg bg-blue-50/50 border border-blue-200 space-y-1.5">
+                    <span className="block text-[10px] font-bold text-blue-700 uppercase tracking-wider">
+                      Dimension Span Text
+                    </span>
+                    <input
+                      type="text"
+                      value={selectedEntity.dimensionText || selectedEntity.label}
+                      onChange={(e) =>
+                        onUpdateEntity(selectedEntity.id, { dimensionText: e.target.value })
+                      }
+                      placeholder={`e.g. 3.20 m (10' 6")`}
                       className="w-full px-2 py-1 text-xs bg-white border border-blue-200 rounded font-semibold text-blue-900 focus:outline-none"
                     />
                   </div>
@@ -393,6 +417,10 @@ export const OmegaCADLayerPanel: React.FC<OmegaCADLayerPanelProps> = ({
                       <span className="text-slate-400">Active Layers:</span>
                       <span className="font-semibold text-slate-800">{drawing.layers.length} layers</span>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Toolkits Active:</span>
+                      <span className="font-semibold text-emerald-600">113+ Tools Ready</span>
+                    </div>
                   </div>
                 </div>
 
@@ -400,7 +428,7 @@ export const OmegaCADLayerPanel: React.FC<OmegaCADLayerPanelProps> = ({
                   <Sliders size={20} className="mx-auto text-slate-300 mb-1.5" />
                   <div className="text-xs font-semibold text-slate-600">No Entity Selected</div>
                   <div className="text-[10.5px] text-slate-400 mt-0.5">
-                    Click any wall, door, room, or column on the canvas to inspect its CAD properties.
+                    Click any block on the canvas to inspect or modify its CAD dimensions & properties.
                   </div>
                 </div>
               </div>

@@ -108,20 +108,7 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
   };
 
   // Add entity from ribbon or command line
-  const handleAddEntity = (preset: {
-    type: CadEntityType;
-    layerId: string;
-    label: string;
-    sublabel?: string;
-    width: number;
-    height: number;
-    color: string;
-    wallThickness?: number;
-    wallHatch?: 'concrete' | 'brick' | 'solid';
-    roomArea?: string;
-    dimensionText?: string;
-    furnitureType?: 'bed' | 'sofa' | 'dining' | 'toilet' | 'desk';
-  }) => {
+  const handleAddEntity = (preset: any) => {
     pushHistory(drawing);
 
     const newEntity: CadEntity = {
@@ -204,6 +191,181 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
     }
   };
 
+  // ==========================================
+  // MICRO-TOOLS IMPLEMENTATION
+  // ==========================================
+
+  // 1. Parallel Offset Tool
+  const handleOffsetEntity = (distanceMm: number) => {
+    const target = drawing.entities.find((e) => e.id === selectedEntityId);
+    if (!target) return;
+    pushHistory(drawing);
+
+    const offsetPx = Math.round(distanceMm / 10);
+    const offsetClone: CadEntity = {
+      ...JSON.parse(JSON.stringify(target)),
+      id: `cad_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      x: target.x + offsetPx,
+      y: target.y + offsetPx,
+      label: `${target.label} (Offset ${distanceMm}mm)`,
+    };
+
+    setDrawing((prev) => ({
+      ...prev,
+      entities: [...prev.entities, offsetClone],
+    }));
+    setSelectedEntityId(offsetClone.id);
+    setCliMessage(`Offset entity parallel by ${distanceMm}mm`);
+  };
+
+  // 2. Mirror Tool
+  const handleMirrorEntity = (axis: 'horizontal' | 'vertical') => {
+    const target = drawing.entities.find((e) => e.id === selectedEntityId);
+    if (!target) return;
+    pushHistory(drawing);
+
+    const mirrored: CadEntity = {
+      ...JSON.parse(JSON.stringify(target)),
+      id: `cad_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      x: axis === 'horizontal' ? target.x + target.width + 40 : target.x,
+      y: axis === 'vertical' ? target.y + target.height + 40 : target.y,
+      rotation: ((target.rotation || 0) + (axis === 'horizontal' ? 180 : 0)) % 360,
+      label: `${target.label} (Mirrored)`,
+    };
+
+    setDrawing((prev) => ({
+      ...prev,
+      entities: [...prev.entities, mirrored],
+    }));
+    setSelectedEntityId(mirrored.id);
+    setCliMessage(`Mirrored entity along ${axis} axis`);
+  };
+
+  // 3. Array Repeat Tool
+  const handleArrayEntity = (count: number, spacingMm: number) => {
+    const target = drawing.entities.find((e) => e.id === selectedEntityId);
+    if (!target) return;
+    pushHistory(drawing);
+
+    const spacingPx = Math.round(spacingMm / 10);
+    const newCopies: CadEntity[] = [];
+
+    for (let i = 1; i < count; i++) {
+      newCopies.push({
+        ...JSON.parse(JSON.stringify(target)),
+        id: `cad_${Date.now()}_arr_${i}_${Math.random().toString(36).slice(2, 6)}`,
+        x: target.x + spacingPx * i,
+        y: target.y,
+        label: `${target.label} [Array ${i + 1}]`,
+      });
+    }
+
+    setDrawing((prev) => ({
+      ...prev,
+      entities: [...prev.entities, ...newCopies],
+    }));
+    setCliMessage(`Created linear array of ${count} entities with ${spacingMm}mm spacing`);
+  };
+
+  // 4. Auto-Dimensioning Tool
+  const handleAutoDimension = () => {
+    const target = drawing.entities.find((e) => e.id === selectedEntityId);
+    pushHistory(drawing);
+
+    if (target) {
+      // Auto-dimension specific selected entity
+      const spanDim: CadEntity = {
+        id: `dim_span_${Date.now()}`,
+        type: 'arch_dimension',
+        layerId: 'layer_dimension',
+        label: `Width: ${((target.width * 10) / 1000).toFixed(2)}m`,
+        dimensionText: `${((target.width * 10) / 1000).toFixed(2)} m (${Math.round((target.width * 10) / 304.8)}' 0")`,
+        x: target.x,
+        y: Math.max(20, target.y - 45),
+        width: target.width,
+        height: 35,
+        color: '#2563EB',
+      };
+
+      const heightDim: CadEntity = {
+        id: `dim_depth_${Date.now()}`,
+        type: 'arch_dimension',
+        layerId: 'layer_dimension',
+        label: `Height: ${((target.height * 10) / 1000).toFixed(2)}m`,
+        dimensionText: `${((target.height * 10) / 1000).toFixed(2)} m`,
+        x: Math.max(20, target.x - 45),
+        y: target.y,
+        width: 35,
+        height: target.height,
+        color: '#2563EB',
+        rotation: 90,
+      };
+
+      setDrawing((prev) => ({
+        ...prev,
+        entities: [...prev.entities, spanDim, heightDim],
+      }));
+      setCliMessage(`Auto-dimensioned ${target.label} span & height`);
+    } else {
+      // Auto-dimension overall bounding box
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minY = Infinity;
+      let maxY = -Infinity;
+
+      drawing.entities.forEach((e) => {
+        if (e.type !== 'arch_dimension') {
+          minX = Math.min(minX, e.x);
+          maxX = Math.max(maxX, e.x + e.width);
+          minY = Math.min(minY, e.y);
+          maxY = Math.max(maxY, e.y + e.height);
+        }
+      });
+
+      if (minX !== Infinity && maxX !== -Infinity) {
+        const overallW = maxX - minX;
+        const totalSpanDim: CadEntity = {
+          id: `dim_total_span_${Date.now()}`,
+          type: 'arch_dimension',
+          layerId: 'layer_dimension',
+          label: `Overall Width: ${((overallW * 10) / 1000).toFixed(2)}m`,
+          dimensionText: `TOTAL OVERALL SPAN: ${((overallW * 10) / 1000).toFixed(2)} m`,
+          x: minX,
+          y: Math.max(20, minY - 50),
+          width: overallW,
+          height: 35,
+          color: '#2563EB',
+        };
+
+        setDrawing((prev) => ({
+          ...prev,
+          entities: [...prev.entities, totalSpanDim],
+        }));
+        setCliMessage(`Generated total overall floor plan span dimension (${((overallW * 10) / 1000).toFixed(2)}m)`);
+      }
+    }
+  };
+
+  // 5. Layer Isolation & Restoration
+  const handleIsolateLayer = (layerId: string) => {
+    setDrawing((prev) => ({
+      ...prev,
+      layers: prev.layers.map((l) => ({
+        ...l,
+        visible: l.id === layerId,
+      })),
+    }));
+    setCliMessage(`Isolated layer: ${layerId}`);
+  };
+
+  const handleRestoreAllLayers = () => {
+    setDrawing((prev) => ({
+      ...prev,
+      layers: prev.layers.map((l) => ({ ...l, visible: true })),
+    }));
+    setCliMessage('Restored visibility of all CAD layers');
+  };
+
   // Command Line Prompt Executer
   const handleExecuteCommand = (rawCmd: string) => {
     const cmd = rawCmd.toUpperCase().trim();
@@ -241,10 +403,20 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
       handleAddEntity({
         type: 'arch_column',
         layerId: 'layer_column',
-        label: 'Column C',
+        label: 'Column C (300×300)',
         width: 36,
         height: 36,
         color: '#0F172A',
+      });
+    } else if (cmd === 'STAIR' || cmd === 'ST') {
+      handleAddEntity({
+        type: 'arch_stair',
+        layerId: 'layer_stair',
+        label: 'Staircase Flight (10 Treads)',
+        width: 100,
+        height: 240,
+        color: '#D97706',
+        stairType: 'straight',
       });
     } else if (cmd === 'ROOM' || cmd === 'R') {
       handleAddEntity({
@@ -266,6 +438,44 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
         color: '#2563EB',
         dimensionText: '3.20 m (10\' 6")',
       });
+    } else if (cmd === 'WC' || cmd === 'TOILET') {
+      handleAddEntity({
+        type: 'arch_sanitary',
+        layerId: 'layer_sanitary',
+        label: 'Water Closet WC',
+        width: 45,
+        height: 65,
+        color: '#06B6D4',
+        sanitaryType: 'toilet',
+      });
+    } else if (cmd === 'LIGHT' || cmd === 'ELEC') {
+      handleAddEntity({
+        type: 'arch_electrical',
+        layerId: 'layer_electrical',
+        label: 'Recessed Downlight',
+        width: 25,
+        height: 25,
+        color: '#EAB308',
+        electricalType: 'light',
+      });
+    } else if (cmd === 'TREE' || cmd === 'SITE') {
+      handleAddEntity({
+        type: 'arch_site',
+        layerId: 'layer_site',
+        label: 'Landscape Tree',
+        width: 100,
+        height: 100,
+        color: '#10B981',
+        siteType: 'tree',
+      });
+    } else if (cmd === 'OFFSET' || cmd === 'O') {
+      handleOffsetEntity(115);
+    } else if (cmd === 'MIRROR' || cmd === 'MI') {
+      handleMirrorEntity('horizontal');
+    } else if (cmd === 'ARRAY' || cmd === 'AR') {
+      handleArrayEntity(3, 1500);
+    } else if (cmd === 'AUTODIM' || cmd === 'AD') {
+      handleAutoDimension();
     } else if (cmd === 'ROTATE' || cmd === 'RO') {
       if (selectedEntityId) {
         handleRotateEntity(selectedEntityId);
@@ -283,7 +493,7 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
       downloadDxf(drawing);
       setCliMessage('Exported AutoCAD AC1015 DXF blueprint!');
     } else if (cmd === 'HELP' || cmd === '?') {
-      setCliMessage('Commands: WALL, DOOR, WINDOW, COL, ROOM, DIM, ROTATE, ORTHO, FIT, DXF');
+      setCliMessage('Commands: WALL, DOOR, WIN, COL, STAIR, ROOM, DIM, WC, LIGHT, TREE, OFFSET, MIRROR, ARRAY, AUTODIM, ROTATE, DXF');
     } else {
       setCliMessage(`Unknown command: "${rawCmd}". Type HELP for available commands.`);
     }
@@ -373,13 +583,13 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
 
       {/* 2. MAIN CAD WORKSPACE */}
       <div className="flex flex-1 h-[calc(100vh-3.5rem-2.25rem)] relative overflow-hidden">
-        {/* Left: Tool Ribbon & CAD Blocks Library */}
+        {/* Left: Tool Ribbon & 100+ CAD Blocks Library */}
         <OmegaCADRibbon
           onAddCadEntity={handleAddEntity}
           onOpenScanModal={() => setIsScanModalOpen(true)}
         />
 
-        {/* Center: Precision CAD Drafting Canvas */}
+        {/* Center: Precision CAD Drafting Canvas with Floating Micro-Tools */}
         <OmegaCADCanvas
           drawing={drawing}
           selectedEntityId={selectedEntityId}
@@ -394,6 +604,12 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
           orthoMode={orthoMode}
           canvasTheme={canvasTheme}
           onZoomFit={() => setZoom(0.85)}
+          onOffsetEntity={handleOffsetEntity}
+          onMirrorEntity={handleMirrorEntity}
+          onArrayEntity={handleArrayEntity}
+          onAutoDimension={handleAutoDimension}
+          onIsolateLayer={handleIsolateLayer}
+          onRestoreAllLayers={handleRestoreAllLayers}
         />
 
         {/* Right: Layer Manager & Entity Inspector Panel */}
