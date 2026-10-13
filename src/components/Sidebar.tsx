@@ -25,6 +25,12 @@ import {
   Split,
   X,
   Compass,
+  Ruler,
+  Home,
+  Columns,
+  DoorClosed,
+  Armchair,
+  FileCheck,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -34,12 +40,12 @@ interface SidebarProps {
   onOpenTemplates?: () => void;
 }
 
-type ShapeCategory = 'all' | 'general' | 'flowchart' | 'cloud' | 'uml';
+type ShapeCategory = 'all' | 'architecture' | 'general' | 'flowchart' | 'cloud' | 'uml';
 
 interface ShapeItem {
   type: NodeType;
   name: string;
-  category: 'general' | 'flowchart' | 'cloud' | 'uml';
+  category: 'general' | 'flowchart' | 'cloud' | 'uml' | 'architecture';
   desc: string;
   icon: React.ReactNode;
   defaultColor: string;
@@ -205,6 +211,88 @@ const ALL_SHAPES: ShapeItem[] = [
     defaultColor: '#334155',
     tags: ['erd', 'schema', 'entity', 'model'],
   },
+  // Architecture & 2D CAD Primitives
+  {
+    type: 'arch_wall',
+    name: 'Wall (Civil/Layout)',
+    category: 'architecture',
+    desc: 'Drafting wall segment with hatching',
+    icon: <Ruler size={15} className="text-slate-800" />,
+    defaultColor: '#334155',
+    tags: ['wall', 'brick', 'civil', 'architecture', 'cad', 'boundary', 'autocad'],
+  },
+  {
+    type: 'arch_door',
+    name: 'Swing Door (CAD)',
+    category: 'architecture',
+    desc: '90° swing arc opening with jambs',
+    icon: <DoorClosed size={15} className="text-blue-600" />,
+    defaultColor: '#2563EB',
+    tags: ['door', 'opening', 'entrance', 'cad', 'architectural'],
+  },
+  {
+    type: 'arch_window',
+    name: 'Glazed Window',
+    category: 'architecture',
+    desc: '2D CAD window glazing with sill',
+    icon: <Columns size={15} className="text-sky-600" />,
+    defaultColor: '#0284C7',
+    tags: ['window', 'glass', 'glazing', 'cad', 'opening'],
+  },
+  {
+    type: 'arch_room',
+    name: 'Room Zone (Auto Area)',
+    category: 'architecture',
+    desc: 'Room boundary with auto m² / sq ft area',
+    icon: <Home size={15} className="text-indigo-600" />,
+    defaultColor: '#3B82F6',
+    tags: ['room', 'bedroom', 'living', 'area', 'floorplan', 'civil', 'space'],
+  },
+  {
+    type: 'arch_dimension',
+    name: 'Linear Dimension Line',
+    category: 'architecture',
+    desc: 'AutoCAD tick witness line measurement',
+    icon: <Compass size={15} className="text-blue-600" />,
+    defaultColor: '#2563EB',
+    tags: ['dimension', 'ruler', 'measure', 'cad', 'distance', 'length'],
+  },
+  {
+    type: 'arch_column',
+    name: 'Structural Column (Pillar)',
+    category: 'architecture',
+    desc: 'Concrete structural column with rebar hatch',
+    icon: <Box size={15} className="text-slate-800" />,
+    defaultColor: '#1E293B',
+    tags: ['column', 'pillar', 'concrete', 'civil', 'structural', 'rebar'],
+  },
+  {
+    type: 'arch_stair',
+    name: 'Staircase Flight',
+    category: 'architecture',
+    desc: '2D stair treads with travel direction',
+    icon: <Layers size={15} className="text-slate-600" />,
+    defaultColor: '#475569',
+    tags: ['stair', 'staircase', 'steps', 'flight', 'civil'],
+  },
+  {
+    type: 'arch_furniture',
+    name: 'Bed / Fixture Block',
+    category: 'architecture',
+    desc: '2D architectural furniture block',
+    icon: <Armchair size={15} className="text-amber-600" />,
+    defaultColor: '#64748B',
+    tags: ['furniture', 'bed', 'sofa', 'toilet', 'block', 'interior'],
+  },
+  {
+    type: 'arch_titleblock',
+    name: 'Drawing Title Block',
+    category: 'architecture',
+    desc: 'Engineering sheet title & scale header',
+    icon: <FileCheck size={15} className="text-emerald-700" />,
+    defaultColor: '#0F172A',
+    tags: ['titleblock', 'border', 'drawing', 'scale', 'blueprint', 'autocad'],
+  },
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -274,6 +362,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {(
             [
               { id: 'all', label: 'All' },
+              { id: 'architecture', label: 'Arch' },
               { id: 'general', label: 'General' },
               { id: 'flowchart', label: 'Flow' },
               { id: 'cloud', label: 'Cloud' },

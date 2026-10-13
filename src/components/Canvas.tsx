@@ -52,12 +52,13 @@ interface CanvasProps {
   snapToGrid: boolean;
   gridSize?: number;
   canvasBg?: string;
-  gridType?: 'dots' | 'lines' | 'none';
+  gridType?: 'dots' | 'lines' | 'none' | 'blueprint' | 'engineering';
   pageView?: boolean;
   commentsCountByNodeId?: Record<string, number>;
   hasUnresolvedCommentsByNodeId?: Record<string, boolean>;
   onOpenNodeComments?: (nodeId: string) => void;
   onAddNodeAt?: (type: any, x: number, y: number) => void;
+  onRotateNode?: (nodeId: string, angle: number) => void;
 
   // Multi-Page support (draw.io style)
   pages?: DiagramPage[];
@@ -101,6 +102,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   hasUnresolvedCommentsByNodeId,
   onOpenNodeComments,
   onAddNodeAt,
+  onRotateNode,
 
   pages = [],
   activePageIndex = 0,
@@ -796,7 +798,31 @@ export const Canvas: React.FC<CanvasProps> = ({
       {gridType !== 'none' && (
         <svg className="absolute inset-0 w-full h-full pointer-events-none">
           <defs>
-            {gridType === 'dots' ? (
+            {gridType === 'blueprint' ? (
+              <pattern
+                id="canvas-grid-blueprint"
+                width={gridSize * 4 * zoom}
+                height={gridSize * 4 * zoom}
+                patternUnits="userSpaceOnUse"
+                patternTransform={`translate(${pan.x % (gridSize * 4 * zoom)}, ${pan.y % (gridSize * 4 * zoom)})`}
+              >
+                {/* Minor grid lines */}
+                <path
+                  d={`M ${gridSize * zoom} 0 L ${gridSize * zoom} ${gridSize * 4 * zoom} M ${gridSize * 2 * zoom} 0 L ${gridSize * 2 * zoom} ${gridSize * 4 * zoom} M ${gridSize * 3 * zoom} 0 L ${gridSize * 3 * zoom} ${gridSize * 4 * zoom} M 0 ${gridSize * zoom} L ${gridSize * 4 * zoom} ${gridSize * zoom} M 0 ${gridSize * 2 * zoom} L ${gridSize * 4 * zoom} ${gridSize * 2 * zoom} M 0 ${gridSize * 3 * zoom} L ${gridSize * 4 * zoom} ${gridSize * 3 * zoom}`}
+                  fill="none"
+                  stroke="#1E3A5F"
+                  strokeWidth="0.75"
+                />
+                {/* Major grid lines */}
+                <path
+                  d={`M ${gridSize * 4 * zoom} 0 L 0 0 0 ${gridSize * 4 * zoom}`}
+                  fill="none"
+                  stroke="#0284C7"
+                  strokeWidth="1.2"
+                  strokeOpacity="0.8"
+                />
+              </pattern>
+            ) : gridType === 'dots' ? (
               <pattern
                 id="canvas-grid-dots"
                 width={gridSize * zoom}
@@ -831,7 +857,13 @@ export const Canvas: React.FC<CanvasProps> = ({
           <rect
             width="100%"
             height="100%"
-            fill={gridType === 'dots' ? 'url(#canvas-grid-dots)' : 'url(#canvas-grid-lines)'}
+            fill={
+              gridType === 'blueprint'
+                ? 'url(#canvas-grid-blueprint)'
+                : gridType === 'dots'
+                ? 'url(#canvas-grid-dots)'
+                : 'url(#canvas-grid-lines)'
+            }
           />
         </svg>
       )}
@@ -955,6 +987,7 @@ export const Canvas: React.FC<CanvasProps> = ({
             onDeleteNode={onDeleteNode}
             onOpenProperties={onOpenProperties}
             onScaleNode={handleScaleNode}
+            onRotateNode={onRotateNode}
             onFocusNode={handleFocusNode}
             zoom={zoom}
             commentCount={commentsCountByNodeId ? commentsCountByNodeId[node.id] || 0 : undefined}

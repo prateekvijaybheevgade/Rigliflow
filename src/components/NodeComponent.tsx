@@ -12,6 +12,7 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
+  RotateCw,
 } from 'lucide-react';
 
 interface NodeComponentProps {
@@ -32,6 +33,7 @@ interface NodeComponentProps {
   onDeleteNode?: (nodeId: string) => void;
   onOpenProperties?: (nodeId: string) => void;
   onScaleNode?: (nodeId: string, factor: number) => void;
+  onRotateNode?: (nodeId: string, angle: number) => void;
   onFocusNode?: (node: FlowNode) => void;
   zoom: number;
   commentCount?: number;
@@ -53,6 +55,7 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
   onDeleteNode,
   onOpenProperties,
   onScaleNode,
+  onRotateNode,
   onFocusNode,
   zoom,
   commentCount,
@@ -195,6 +198,8 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
         height: h,
         opacity: nodeOpacity,
         touchAction: 'none',
+        transform: node.rotation ? `rotate(${node.rotation}deg)` : undefined,
+        transformOrigin: 'center center',
       }}
       onMouseDown={(e) => {
         if (isEditing) return;
@@ -533,6 +538,173 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
             strokeDasharray={dashArray}
           />
         )}
+
+        {/* --- ARCHITECTURAL & CAD PRIMITIVES --- */}
+        {node.type === 'arch_wall' && (
+          <g>
+            <rect
+              x="1"
+              y="1"
+              width={w - 2}
+              height={h - 2}
+              fill={node.wallHatch === 'concrete' ? '#475569' : fillColor || '#334155'}
+              fillOpacity={node.opacity ?? 0.9}
+              stroke={borderColor || '#0F172A'}
+              strokeWidth={strokeWidth || 2}
+            />
+            {/* Architectural Hatch Lines */}
+            <line x1="2" y1="2" x2={w - 2} y2="2" stroke="#FFFFFF" strokeWidth="1" strokeOpacity="0.4" />
+            <line x1="2" y1={h - 2} x2={w - 2} y2={h - 2} stroke="#FFFFFF" strokeWidth="1" strokeOpacity="0.4" />
+            {w > 30 && h > 12 && (
+              <path
+                d={`M 8 2 L 2 8 M 20 2 L 2 20 M ${w - 20} 2 L ${w - 2} 20`}
+                stroke="#FFFFFF"
+                strokeWidth="0.8"
+                strokeOpacity="0.3"
+                fill="none"
+              />
+            )}
+          </g>
+        )}
+
+        {node.type === 'arch_door' && (
+          <g>
+            {/* Wall Jambs */}
+            <rect x="2" y={h - 10} width="6" height="8" fill="#1E293B" />
+            <rect x={w - 8} y={h - 10} width="6" height="8" fill="#1E293B" />
+            {/* Sill Guide */}
+            <line x1="2" y1={h - 4} x2={w - 2} y2={h - 4} stroke="#94A3B8" strokeWidth="1" strokeDasharray="3,3" />
+            {/* 90-degree Door Swing Arc */}
+            <path
+              d={`M ${w - 8} ${h - 6} A ${w - 14} ${h - 14} 0 0 0 8 4`}
+              fill="none"
+              stroke="#3B82F6"
+              strokeWidth="1.5"
+              strokeDasharray="4,3"
+            />
+            {/* Door Leaf (Thick Panel) */}
+            <line x1="8" y1={h - 6} x2="8" y2="4" stroke="#2563EB" strokeWidth="3.5" strokeLinecap="round" />
+          </g>
+        )}
+
+        {node.type === 'arch_window' && (
+          <g>
+            {/* Window Sill Framing */}
+            <rect x="2" y="2" width={w - 4} height={h - 4} fill="#F0F9FF" fillOpacity="0.8" stroke="#0284C7" strokeWidth="1.5" />
+            {/* Central Glazing Line */}
+            <line x1="6" y1={h / 2} x2={w - 6} y2={h / 2} stroke="#0284C7" strokeWidth="2.5" />
+            {/* Double Glass Lines */}
+            <line x1="6" y1={h / 2 - 3} x2={w - 6} y2={h / 2 - 3} stroke="#38BDF8" strokeWidth="1" />
+            <line x1="6" y1={h / 2 + 3} x2={w - 6} y2={h / 2 + 3} stroke="#38BDF8" strokeWidth="1" />
+            {/* Jamb Caps */}
+            <rect x="2" y="2" width="6" height={h - 4} fill="#1E293B" />
+            <rect x={w - 8} y="2" width="6" height={h - 4} fill="#1E293B" />
+          </g>
+        )}
+
+        {node.type === 'arch_room' && (
+          <g>
+            <rect
+              x="2"
+              y="2"
+              width={w - 4}
+              height={h - 4}
+              rx="4"
+              fill={fillColor || '#3B82F6'}
+              fillOpacity={node.opacity !== undefined ? node.opacity : 0.08}
+              stroke={borderColor || '#60A5FA'}
+              strokeWidth={strokeWidth || 1.5}
+              strokeDasharray="6,4"
+            />
+            {/* CAD Corner tick crosses */}
+            <path
+              d={`M 2 14 L 2 2 L 14 2 M ${w - 14} 2 L ${w - 2} 2 L ${w - 2} 14 M 2 ${h - 14} L 2 ${h - 2} L 14 ${h - 2} M ${w - 14} ${h - 2} L ${w - 2} ${h - 2} L ${w - 2} ${h - 14}`}
+              stroke={borderColor || '#3B82F6'}
+              strokeWidth="2.5"
+              fill="none"
+            />
+          </g>
+        )}
+
+        {node.type === 'arch_dimension' && (
+          <g>
+            {/* Extension witness lines */}
+            <line x1="8" y1="2" x2="8" y2={h - 2} stroke="#64748B" strokeWidth="1.5" />
+            <line x1={w - 8} y1="2" x2={w - 8} y2={h - 2} stroke="#64748B" strokeWidth="1.5" />
+            {/* Main measurement line */}
+            <line x1="8" y1={h / 2} x2={w - 8} y2={h / 2} stroke="#2563EB" strokeWidth="1.5" />
+            {/* AutoCAD 45-degree architectural slash ticks */}
+            <line x1="4" y1={h / 2 + 5} x2="12" y2={h / 2 - 5} stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1={w - 12} y1={h / 2 + 5} x2={w - 4} y2={h / 2 - 5} stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" />
+          </g>
+        )}
+
+        {node.type === 'arch_column' && (
+          <g>
+            {node.columnShape === 'circle' ? (
+              <>
+                <circle cx={w / 2} cy={h / 2} r={Math.min(w, h) / 2 - 2} fill="#334155" stroke="#0F172A" strokeWidth="2" />
+                <line x1={w / 2} y1="4" x2={w / 2} y2={h - 4} stroke="#94A3B8" strokeWidth="1" />
+                <line x1="4" y1={h / 2} x2={w - 4} y2={h / 2} stroke="#94A3B8" strokeWidth="1" />
+              </>
+            ) : (
+              <>
+                <rect x="2" y="2" width={w - 4} height={h - 4} fill="#1E293B" stroke="#0F172A" strokeWidth="2" />
+                {/* Rebar cross hatch */}
+                <line x1="3" y1="3" x2={w - 3} y2={h - 3} stroke="#94A3B8" strokeWidth="1.5" strokeOpacity="0.6" />
+                <line x1={w - 3} y1="3" x2="3" y2={h - 3} stroke="#94A3B8" strokeWidth="1.5" strokeOpacity="0.6" />
+              </>
+            )}
+          </g>
+        )}
+
+        {node.type === 'arch_stair' && (
+          <g>
+            <rect x="2" y="2" width={w - 4} height={h - 4} fill="#F8FAFC" stroke="#334155" strokeWidth="1.5" />
+            {/* Tread lines */}
+            {Array.from({ length: 6 }).map((_, i) => (
+              <line key={i} x1="2" y1={(h / 7) * (i + 1)} x2={w - 2} y2={(h / 7) * (i + 1)} stroke="#64748B" strokeWidth="1" />
+            ))}
+            {/* Travel arrow */}
+            <line x1={w / 2} y1={h - 8} x2={w / 2} y2="10" stroke="#2563EB" strokeWidth="1.5" />
+            <circle cx={w / 2} cy={h - 8} r="2.5" fill="#2563EB" />
+            <polygon points={`${w / 2 - 4},14 ${w / 2 + 4},14 ${w / 2},6`} fill="#2563EB" />
+          </g>
+        )}
+
+        {node.type === 'arch_furniture' && (
+          <g>
+            <rect x="2" y="2" width={w - 4} height={h - 4} rx="4" fill="#F1F5F9" stroke="#475569" strokeWidth="1.5" />
+            {node.furnitureType === 'sofa' ? (
+              <>
+                <rect x="4" y="4" width={w - 8} height={h * 0.25} rx="3" fill="#CBD5E1" />
+                <rect x="4" y="4" width={w * 0.18} height={h - 8} rx="3" fill="#CBD5E1" />
+                <rect x={w - w * 0.18 - 4} y="4" width={w * 0.18} height={h - 8} rx="3" fill="#CBD5E1" />
+              </>
+            ) : node.furnitureType === 'toilet' ? (
+              <>
+                <rect x={w * 0.2} y="4" width={w * 0.6} height={h * 0.28} rx="2" fill="#E2E8F0" stroke="#64748B" />
+                <ellipse cx={w / 2} cy={h * 0.65} rx={w * 0.3} ry={h * 0.28} fill="#FFFFFF" stroke="#64748B" strokeWidth="1.5" />
+              </>
+            ) : (
+              <>
+                {/* Default Bed */}
+                <rect x="6" y="6" width={w * 0.4} height={h * 0.28} rx="3" fill="#E2E8F0" stroke="#64748B" strokeWidth="1" />
+                <rect x={w - w * 0.4 - 6} y="6" width={w * 0.4} height={h * 0.28} rx="3" fill="#E2E8F0" stroke="#64748B" strokeWidth="1" />
+                <line x1="6" y1={h * 0.45} x2={w - 6} y2={h * 0.45} stroke="#94A3B8" strokeWidth="1" />
+              </>
+            )}
+          </g>
+        )}
+
+        {node.type === 'arch_titleblock' && (
+          <g>
+            <rect x="1" y="1" width={w - 2} height={h - 2} fill="#FFFFFF" stroke="#0F172A" strokeWidth="2" />
+            <rect x="3" y="3" width={w - 6} height={h - 6} fill="none" stroke="#64748B" strokeWidth="1" />
+            <line x1="1" y1={h * 0.45} x2={w - 1} y2={h * 0.45} stroke="#0F172A" strokeWidth="1.5" />
+            <line x1={w * 0.6} y1={h * 0.45} x2={w * 0.6} y2={h - 1} stroke="#0F172A" strokeWidth="1.5" />
+          </g>
+        )}
       </svg>
 
       {/* Floating Quick Action Pill for Touch & Quick Edit (When Selected) */}
@@ -576,6 +748,19 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
                 <span className="text-[10px]">+</span>
               </button>
             </div>
+          )}
+
+          {/* Quick 90-degree Rotation Button */}
+          {onRotateNode && !node.isLocked && (
+            <button
+              type="button"
+              onClick={() => onRotateNode(node.id, ((node.rotation || 0) + 90) % 360)}
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded-full hover:bg-slate-800 text-[11px] text-cyan-300 hover:text-white transition-colors cursor-pointer border-l border-slate-700/80 pl-1"
+              title="Rotate 90° Clockwise"
+            >
+              <RotateCw size={11} />
+              <span className="text-[10px]">{node.rotation ? `${node.rotation}°` : '90°'}</span>
+            </button>
           )}
 
           {/* Zoom Canvas to Node Button */}
@@ -755,43 +940,79 @@ export const NodeComponent: React.FC<NodeComponentProps> = ({
           </div>
         ) : (
           <>
-            <div
-              className={`flex items-center gap-1.5 mb-0.5 max-w-full ${
-                node.textAlign === 'left'
-                  ? 'justify-start'
-                  : node.textAlign === 'right'
-                  ? 'justify-end'
-                  : 'justify-center'
-              }`}
-            >
-              {IconComponent && (
-                <IconComponent
-                  size={15}
-                  style={{ color }}
-                  className="shrink-0"
-                />
-              )}
-              <span
-                className="leading-snug line-clamp-2 max-w-[90%]"
-                style={{
-                  color: textColor,
-                  fontSize: node.fontSize ? `${node.fontSize}px` : '12px',
-                  fontFamily,
-                  fontWeight: node.fontWeight || '600',
-                  fontStyle: node.fontStyle || 'normal',
-                }}
-              >
-                {node.label}
+            {node.type === 'arch_dimension' ? (
+              <div className="bg-white/95 backdrop-blur-xs px-2 py-0.5 rounded shadow-xs border border-blue-200 text-blue-700 font-mono text-[11px] font-bold tracking-tight">
+                {node.dimensionText || `${(w / 50).toFixed(2)} m`}
+              </div>
+            ) : node.type === 'arch_room' ? (
+              <div className="bg-white/95 backdrop-blur-xs px-3 py-1.5 rounded-lg shadow-sm border border-slate-300 flex flex-col items-center">
+                <span className="font-bold text-slate-800 text-xs tracking-wide">{node.label}</span>
+                <span className="font-mono text-[10px] text-blue-600 font-semibold mt-0.5">
+                  {node.roomArea || `${((w * h) / 2500).toFixed(1)} m² (${(((w * h) / 2500) * 10.764).toFixed(0)} sq ft)`}
+                </span>
+                {node.sublabel && (
+                  <span className="text-[9.5px] text-slate-400 mt-0.5">{node.sublabel}</span>
+                )}
+              </div>
+            ) : node.type === 'arch_wall' ? (
+              <span className="bg-slate-900/85 text-white font-mono text-[10px] px-2 py-0.5 rounded shadow-xs font-semibold">
+                {node.label || `${(Math.max(w, h) / 50).toFixed(2)} m`}
               </span>
-            </div>
+            ) : node.type === 'arch_titleblock' ? (
+              <div className="w-full h-full p-2 flex flex-col justify-between text-left font-mono">
+                <div className="border-b border-slate-900 pb-1 flex justify-between items-center">
+                  <span className="font-bold text-[11px] tracking-wider uppercase text-slate-900 truncate">
+                    {node.label || 'ARCHITECTURAL DRAWING'}
+                  </span>
+                  <span className="text-[9.5px] text-slate-600 font-semibold">1:50</span>
+                </div>
+                <div className="flex justify-between text-[9px] text-slate-600">
+                  <span>REV: 01</span>
+                  <span>SHEET A-101</span>
+                  <span>{node.sublabel || 'PRELIMINARY'}</span>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div
+                  className={`flex items-center gap-1.5 mb-0.5 max-w-full ${
+                    node.textAlign === 'left'
+                      ? 'justify-start'
+                      : node.textAlign === 'right'
+                      ? 'justify-end'
+                      : 'justify-center'
+                  }`}
+                >
+                  {IconComponent && (
+                    <IconComponent
+                      size={15}
+                      style={{ color }}
+                      className="shrink-0"
+                    />
+                  )}
+                  <span
+                    className="leading-snug line-clamp-2 max-w-[90%]"
+                    style={{
+                      color: textColor,
+                      fontSize: node.fontSize ? `${node.fontSize}px` : '12px',
+                      fontFamily,
+                      fontWeight: node.fontWeight || '600',
+                      fontStyle: node.fontStyle || 'normal',
+                    }}
+                  >
+                    {node.label}
+                  </span>
+                </div>
 
-            {node.sublabel && (
-              <span
-                className="text-[10px] leading-tight text-slate-500 line-clamp-1 max-w-[95%]"
-                style={{ fontFamily }}
-              >
-                {node.sublabel}
-              </span>
+                {node.sublabel && (
+                  <span
+                    className="text-[10px] leading-tight text-slate-500 line-clamp-1 max-w-[95%]"
+                    style={{ fontFamily }}
+                  >
+                    {node.sublabel}
+                  </span>
+                )}
+              </>
             )}
           </>
         )}

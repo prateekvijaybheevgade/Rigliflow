@@ -39,6 +39,7 @@ import {
   FileInput,
   Box,
   Sliders,
+  Compass,
 } from 'lucide-react';
 import { DiagramData } from '../types/flowchart';
 import { SAMPLE_DIAGRAMS, SampleTemplate } from '../utils/samples';
@@ -92,6 +93,7 @@ interface ToolbarProps {
   onToggleMobileProperties?: () => void;
   mobileSidebarOpen?: boolean;
   mobilePropertiesOpen?: boolean;
+  onToggleStudioMode?: (mode: 'flowchart' | 'architecture') => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -141,6 +143,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onToggleMobileProperties,
   mobileSidebarOpen = false,
   mobilePropertiesOpen = false,
+  onToggleStudioMode,
 }) => {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isSamplesOpen, setIsSamplesOpen] = useState(false);
@@ -303,6 +306,37 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 <Cloud size={12} className="text-slate-400" />
                 <span>Save to Cloud</span>
               </button>
+            )}
+
+            {/* Studio Mode Switcher: Flowchart vs Architecture CAD */}
+            {onToggleStudioMode && (
+              <div className="flex items-center p-0.5 bg-slate-100 rounded-lg border border-slate-200/90 ml-1.5">
+                <button
+                  type="button"
+                  onClick={() => onToggleStudioMode('flowchart')}
+                  className={`px-2 py-0.5 text-[10.5px] font-semibold rounded-md transition-all cursor-pointer ${
+                    diagram.studioMode !== 'architecture'
+                      ? 'bg-white text-blue-700 shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  title="Logic & System Flowcharts"
+                >
+                  Flowchart
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onToggleStudioMode('architecture')}
+                  className={`px-2 py-0.5 text-[10.5px] font-semibold rounded-md transition-all cursor-pointer flex items-center gap-1 ${
+                    diagram.studioMode === 'architecture'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800'
+                  }`}
+                  title="Civil, 2D Floor Plans & CAD Blueprints"
+                >
+                  <Compass size={11} className={diagram.studioMode === 'architecture' ? 'text-amber-300' : 'text-slate-400'} />
+                  <span>Architecture</span>
+                </button>
+              </div>
             )}
           </div>
         </div>

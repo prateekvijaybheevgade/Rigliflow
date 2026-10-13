@@ -119,6 +119,85 @@ export function generateSvgString(diagram: DiagramData, transparentBg = false): 
           </g>
         `;
         break;
+      case 'arch_wall':
+        shapeSvg = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="#0F172A" stroke-width="2" />`;
+        break;
+      case 'arch_door':
+        shapeSvg = `
+          <g>
+            <rect x="${x + 2}" y="${y + h - 10}" width="6" height="8" fill="#1E293B" />
+            <rect x="${x + w - 8}" y="${y + h - 10}" width="6" height="8" fill="#1E293B" />
+            <line x1="${x + 2}" y1="${y + h - 4}" x2="${x + w - 2}" y2="${y + h - 4}" stroke="#94A3B8" stroke-width="1" stroke-dasharray="3,3" />
+            <path d="M ${x + w - 8} ${y + h - 6} A ${w - 14} ${h - 14} 0 0 0 ${x + 8} ${y + 4}" fill="none" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="4,3" />
+            <line x1="${x + 8}" y1="${y + h - 6}" x2="${x + 8}" y2="${y + 4}" stroke="#2563EB" stroke-width="3" stroke-linecap="round" />
+          </g>
+        `;
+        break;
+      case 'arch_window':
+        shapeSvg = `
+          <g>
+            <rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" fill="#F0F9FF" stroke="#0284C7" stroke-width="1.5" />
+            <line x1="${x + 6}" y1="${y + h / 2}" x2="${x + w - 6}" y2="${y + h / 2}" stroke="#0284C7" stroke-width="2" />
+            <rect x="${x + 2}" y="${y + 2}" width="6" height="${h - 4}" fill="#1E293B" />
+            <rect x="${x + w - 8}" y="${y + 2}" width="6" height="${h - 4}" fill="#1E293B" />
+          </g>
+        `;
+        break;
+      case 'arch_room':
+        shapeSvg = `
+          <g>
+            <rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" rx="4" fill="${fill}" fill-opacity="0.08" stroke="#3B82F6" stroke-width="1.5" stroke-dasharray="6,4" />
+            <path d="M ${x + 2} ${y + 12} L ${x + 2} ${y + 2} L ${x + 12} ${y + 2} M ${x + w - 12} ${y + 2} L ${x + w - 2} ${y + 2} L ${x + w - 2} ${y + 12} M ${x + 2} ${y + h - 12} L ${x + 2} ${y + h - 2} L ${x + 12} ${y + h - 2} M ${x + w - 12} ${y + h - 2} L ${x + w - 2} ${y + h - 2} L ${x + w - 2} ${y + h - 12}" stroke="#3B82F6" stroke-width="2" fill="none" />
+          </g>
+        `;
+        break;
+      case 'arch_dimension':
+        shapeSvg = `
+          <g>
+            <line x1="${x + 8}" y1="${y + 2}" x2="${x + 8}" y2="${y + h - 2}" stroke="#64748B" stroke-width="1.5" />
+            <line x1="${x + w - 8}" y1="${y + 2}" x2="${x + w - 8}" y2="${y + h - 2}" stroke="#64748B" stroke-width="1.5" />
+            <line x1="${x + 8}" y1="${y + h / 2}" x2="${x + w - 8}" y2="${y + h / 2}" stroke="#2563EB" stroke-width="1.5" />
+            <line x1="${x + 4}" y1="${y + h / 2 + 5}" x2="${x + 12}" y2="${y + h / 2 - 5}" stroke="#2563EB" stroke-width="2" stroke-linecap="round" />
+            <line x1="${x + w - 12}" y1="${y + h / 2 + 5}" x2="${x + w - 4}" y2="${y + h / 2 - 5}" stroke="#2563EB" stroke-width="2" stroke-linecap="round" />
+          </g>
+        `;
+        break;
+      case 'arch_column':
+        shapeSvg = `
+          <g>
+            <rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" fill="#1E293B" stroke="#0F172A" stroke-width="2" />
+            <line x1="${x + 3}" y1="${y + 3}" x2="${x + w - 3}" y2="${y + h - 3}" stroke="#94A3B8" stroke-width="1" stroke-opacity="0.6" />
+            <line x1="${x + w - 3}" y1="${y + 3}" x2="${x + 3}" y2="${y + h - 3}" stroke="#94A3B8" stroke-width="1" stroke-opacity="0.6" />
+          </g>
+        `;
+        break;
+      case 'arch_stair':
+        shapeSvg = `
+          <g>
+            <rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" fill="#F8FAFC" stroke="#334155" stroke-width="1.5" />
+            <line x1="${x + w / 2}" y1="${y + h - 8}" x2="${x + w / 2}" y2="${y + 10}" stroke="#2563EB" stroke-width="1.5" />
+            <polygon points="${x + w / 2 - 4},${y + 14} ${x + w / 2 + 4},${y + 14} ${x + w / 2},${y + 6}" fill="#2563EB" />
+          </g>
+        `;
+        break;
+      case 'arch_furniture':
+        shapeSvg = `
+          <g>
+            <rect x="${x + 2}" y="${y + 2}" width="${w - 4}" height="${h - 4}" rx="4" fill="#F1F5F9" stroke="#475569" stroke-width="1.5" />
+            <rect x="${x + 6}" y="${y + 6}" width="${w * 0.4}" height="${h * 0.28}" rx="2" fill="#E2E8F0" stroke="#64748B" stroke-width="1" />
+            <rect x="${x + w - w * 0.4 - 6}" y="${y + 6}" width="${w * 0.4}" height="${h * 0.28}" rx="2" fill="#E2E8F0" stroke="#64748B" stroke-width="1" />
+          </g>
+        `;
+        break;
+      case 'arch_titleblock':
+        shapeSvg = `
+          <g>
+            <rect x="${x + 1}" y="${y + 1}" width="${w - 2}" height="${h - 2}" fill="#FFFFFF" stroke="#0F172A" stroke-width="2" />
+            <line x1="${x + 1}" y1="${y + h * 0.45}" x2="${x + w - 1}" y2="${y + h * 0.45}" stroke="#0F172A" stroke-width="1.5" />
+            <line x1="${x + w * 0.6}" y1="${y + h * 0.45}" x2="${x + w * 0.6}" y2="${y + h - 1}" stroke="#0F172A" stroke-width="1.5" />
+          </g>
+        `;
+        break;
       case 'process':
       default:
         shapeSvg = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="10" fill="${fill}" fill-opacity="0.15" stroke="${fill}" stroke-width="2" />`;
@@ -128,9 +207,10 @@ export function generateSvgString(diagram: DiagramData, transparentBg = false): 
     const fontSize = node.fontSize || 13;
     const hasSublabel = Boolean(node.sublabel);
     const labelY = hasSublabel ? y + h / 2 - 4 : y + h / 2 + 5;
+    const rotTransform = node.rotation ? `transform="rotate(${node.rotation} ${x + w / 2} ${y + h / 2})"` : '';
 
     nodesSvg += `
-    <g class="diagram-node" data-id="${node.id}">
+    <g class="diagram-node" data-id="${node.id}" ${rotTransform}>
       ${shapeSvg}
       <text x="${x + w / 2}" y="${labelY}" fill="${textColor}" font-family="system-ui, -apple-system, sans-serif" font-size="${fontSize}" font-weight="600" text-anchor="middle">${escapeXml(
       node.label

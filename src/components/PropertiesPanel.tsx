@@ -54,6 +54,10 @@ import {
   Check,
   ZoomIn,
   ZoomOut,
+  Compass,
+  Ruler,
+  Home,
+  DoorClosed,
 } from 'lucide-react';
 
 export interface PredefinedIconOverlay {
@@ -92,7 +96,7 @@ export interface PropertiesPanelProps {
   diagramTitle: string;
   diagramDescription?: string;
   canvasBg?: string;
-  gridType?: 'dots' | 'lines' | 'none';
+  gridType?: 'dots' | 'lines' | 'none' | 'blueprint' | 'engineering';
   pageView?: boolean;
   snapToGrid?: boolean;
   totalNodes: number;
@@ -105,7 +109,7 @@ export interface PropertiesPanelProps {
   onUpdateDiagramInfo: (title: string, desc?: string) => void;
   onUpdateCanvasProps?: (props: {
     canvasBg?: string;
-    gridType?: 'dots' | 'lines' | 'none';
+    gridType?: 'dots' | 'lines' | 'none' | 'blueprint' | 'engineering';
     pageView?: boolean;
     snapToGrid?: boolean;
   }) => void;
@@ -446,7 +450,127 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                     <option value="triangle">Triangle (Merge / Yield)</option>
                     <option value="note">Sticky Note</option>
                     <option value="text">Text Box (Transparent)</option>
+                    <optgroup label="Architecture & CAD Primitives">
+                      <option value="arch_wall">Wall (Civil/Layout)</option>
+                      <option value="arch_door">Swing Door (CAD)</option>
+                      <option value="arch_window">Glazed Window</option>
+                      <option value="arch_room">Room Zone (Auto Area)</option>
+                      <option value="arch_dimension">Linear Dimension</option>
+                      <option value="arch_column">Structural Column (Pillar)</option>
+                      <option value="arch_stair">Staircase Flight</option>
+                      <option value="arch_furniture">Bed / Fixture Block</option>
+                      <option value="arch_titleblock">Drawing Title Block</option>
+                    </optgroup>
                   </select>
+                </div>
+
+                {/* 2D CAD & Architectural Drafting Section */}
+                <div className="pt-2 border-t border-slate-100 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10.5px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                      <Compass size={12} className="text-blue-600" />
+                      <span>CAD Drafting & Rotation</span>
+                    </label>
+                    <span className="text-[10px] text-blue-600 font-mono font-bold">
+                      {selectedNode.rotation || 0}°
+                    </span>
+                  </div>
+
+                  {/* 4-way Quick Rotation Controls */}
+                  <div className="grid grid-cols-4 gap-1">
+                    {[0, 90, 180, 270].map((deg) => (
+                      <button
+                        key={deg}
+                        type="button"
+                        onClick={() => onUpdateNode({ rotation: deg })}
+                        className={`py-1 text-xs font-mono font-bold rounded-md border transition-all cursor-pointer ${
+                          (selectedNode.rotation || 0) === deg
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                            : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                        }`}
+                      >
+                        {deg}°
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Real-World CAD Measurement Readout */}
+                  <div className="p-2 bg-blue-50/70 border border-blue-100 rounded-lg flex items-center justify-between text-xs font-mono">
+                    <span className="text-blue-900 font-semibold">Scale (1:50)</span>
+                    <span className="text-blue-700 font-bold">
+                      {(selectedNode.width / 50).toFixed(2)}m × {(selectedNode.height / 50).toFixed(2)}m
+                    </span>
+                  </div>
+
+                  {/* Wall Specific Controls */}
+                  {selectedNode.type === 'arch_wall' && (
+                    <div className="space-y-1.5 pt-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase">
+                        Wall Thickness
+                      </label>
+                      <div className="grid grid-cols-3 gap-1">
+                        {[
+                          { label: '4" / 100mm', h: 12 },
+                          { label: '6" / 150mm', h: 18 },
+                          { label: '9" / 230mm', h: 26 },
+                        ].map((w) => (
+                          <button
+                            key={w.h}
+                            type="button"
+                            onClick={() => onUpdateNode({ height: w.h })}
+                            className={`py-1 px-1 text-[10px] rounded border font-semibold ${
+                              selectedNode.height === w.h
+                                ? 'bg-slate-900 text-white border-slate-900'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                            }`}
+                          >
+                            {w.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Room Zone Preset Controls */}
+                  {selectedNode.type === 'arch_room' && (
+                    <div className="space-y-1.5 pt-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase">
+                        Room Preset Name
+                      </label>
+                      <div className="grid grid-cols-3 gap-1 text-[10px]">
+                        {['Living Room', 'Master Bed', 'Kitchen', 'Bath', 'Office', 'Balcony'].map((rm) => (
+                          <button
+                            key={rm}
+                            type="button"
+                            onClick={() => onUpdateNode({ label: rm })}
+                            className={`py-1 px-1 rounded border font-semibold truncate ${
+                              selectedNode.label === rm
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                            }`}
+                          >
+                            {rm}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Dimension Text Input */}
+                  {selectedNode.type === 'arch_dimension' && (
+                    <div className="space-y-1 pt-1">
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase">
+                        Dimension Callout
+                      </label>
+                      <input
+                        type="text"
+                        value={selectedNode.dimensionText || `${(selectedNode.width / 50).toFixed(2)} m`}
+                        onChange={(e) => onUpdateNode({ dimensionText: e.target.value })}
+                        className="w-full px-2 py-1 border border-slate-200 rounded text-xs font-mono bg-white"
+                        placeholder="e.g. 4.50 m or 14' 9&quot;"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Node Size & Dimensions */}
@@ -1381,7 +1505,7 @@ export const PropertiesPanel: React.FC<PropertiesPanelProps> = ({
                   Grid Pattern
                 </label>
                 <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-md">
-                  {(['dots', 'lines', 'none'] as const).map((g) => (
+                  {(['dots', 'lines', 'blueprint', 'none'] as const).map((g) => (
                     <button
                       key={g}
                       onClick={() => onUpdateCanvasProps({ gridType: g })}

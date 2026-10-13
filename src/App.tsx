@@ -369,6 +369,16 @@ function FlowlifyApp() {
       frame: '#8B5CF6',
       text: '#475569',
       cylinder: '#8B5CF6',
+      // Architectural & CAD Primitives
+      arch_wall: '#334155',
+      arch_door: '#2563EB',
+      arch_window: '#0284C7',
+      arch_room: '#3B82F6',
+      arch_dimension: '#2563EB',
+      arch_column: '#1E293B',
+      arch_stair: '#475569',
+      arch_furniture: '#64748B',
+      arch_titleblock: '#0F172A',
     };
 
     const defaultLabels: Record<NodeType, string> = {
@@ -390,6 +400,16 @@ function FlowlifyApp() {
       table: 'Entity Schema Table',
       frame: 'Group Boundary / Subnet',
       text: 'Text Annotation',
+      // Architectural & CAD Primitives
+      arch_wall: 'Wall Segment',
+      arch_door: 'Swing Door',
+      arch_window: 'Glazed Window',
+      arch_room: 'Living Room',
+      arch_dimension: '4.50 m',
+      arch_column: 'Column C1',
+      arch_stair: 'Main Staircase',
+      arch_furniture: 'Master Bed',
+      arch_titleblock: 'ARCHITECTURAL BLUEPRINT',
     };
 
     const defaultWidths: Partial<Record<NodeType, number>> = {
@@ -400,6 +420,15 @@ function FlowlifyApp() {
       frame: 320,
       table: 220,
       text: 160,
+      arch_wall: 240,
+      arch_door: 90,
+      arch_window: 120,
+      arch_room: 320,
+      arch_dimension: 220,
+      arch_column: 45,
+      arch_stair: 140,
+      arch_furniture: 140,
+      arch_titleblock: 420,
     };
 
     const defaultHeights: Partial<Record<NodeType, number>> = {
@@ -410,6 +439,15 @@ function FlowlifyApp() {
       frame: 220,
       table: 110,
       text: 45,
+      arch_wall: 18,
+      arch_door: 90,
+      arch_window: 24,
+      arch_room: 240,
+      arch_dimension: 35,
+      arch_column: 45,
+      arch_stair: 240,
+      arch_furniture: 160,
+      arch_titleblock: 85,
     };
 
     const newNode: FlowNode = {
@@ -525,6 +563,15 @@ function FlowlifyApp() {
     setDiagram((prev) => ({
       ...prev,
       nodes: prev.nodes.map((n) => (n.id === targetId ? { ...n, ...updated } : n)),
+    }));
+  };
+
+  // Rotate node by degrees (0, 90, 180, 270)
+  const handleRotateNode = (nodeId: string, angle: number) => {
+    pushHistory(diagram);
+    setDiagram((prev) => ({
+      ...prev,
+      nodes: prev.nodes.map((n) => (n.id === nodeId ? { ...n, rotation: angle } : n)),
     }));
   };
 
@@ -717,6 +764,26 @@ function FlowlifyApp() {
     }));
     setSelectedNodeIds([]);
     setSelectedEdgeId(null);
+  };
+
+  // Toggle Studio Mode: Flowchart Logic vs Architecture CAD
+  const handleToggleStudioMode = (mode: 'flowchart' | 'architecture') => {
+    pushHistory(diagram);
+    if (mode === 'architecture') {
+      setDiagram((prev) => ({
+        ...prev,
+        studioMode: 'architecture',
+        gridType: 'blueprint',
+        canvasBg: '#0B1E36',
+      }));
+    } else {
+      setDiagram((prev) => ({
+        ...prev,
+        studioMode: 'flowchart',
+        gridType: 'dots',
+        canvasBg: '#F8FAFC',
+      }));
+    }
   };
 
   // Import JSON diagram project file
@@ -1091,6 +1158,7 @@ function FlowlifyApp() {
         onToggleMobileProperties={() => setMobilePropertiesOpen(!mobilePropertiesOpen)}
         mobileSidebarOpen={mobileSidebarOpen}
         mobilePropertiesOpen={mobilePropertiesOpen}
+        onToggleStudioMode={handleToggleStudioMode}
       />
 
       {/* Main Studio Work Area */}
@@ -1190,6 +1258,7 @@ function FlowlifyApp() {
             onDeletePage={handleDeletePage}
             onDuplicatePage={handleDuplicatePage}
             onAddNodeAt={(type, x, y) => handleAddNode(type, x, y)}
+            onRotateNode={handleRotateNode}
           />
 
           {/* Floating Mobile Bottom Action Dock */}

@@ -16,7 +16,17 @@ export type NodeType =
   | 'table'
   | 'frame'
   | 'text'
-  | 'cylinder';
+  | 'cylinder'
+  // Architectural & CAD Primitives
+  | 'arch_wall'
+  | 'arch_door'
+  | 'arch_window'
+  | 'arch_room'
+  | 'arch_dimension'
+  | 'arch_column'
+  | 'arch_stair'
+  | 'arch_furniture'
+  | 'arch_titleblock';
 
 export type PortPosition = 'top' | 'right' | 'bottom' | 'left';
 
@@ -45,6 +55,20 @@ export interface Node {
   fontStyle?: 'normal' | 'italic';
   textAlign?: 'left' | 'center' | 'right';
   isLocked?: boolean;
+
+  // Architectural & 2D CAD Properties
+  rotation?: number; // 0, 90, 180, 270 degrees
+  wallThickness?: number;
+  wallHatch?: 'solid' | 'concrete' | 'brick' | 'hollow';
+  doorType?: 'single' | 'double' | 'sliding' | 'pocket';
+  doorSwing?: 'left' | 'right';
+  windowType?: 'standard' | 'double' | 'bay';
+  roomType?: string;
+  roomArea?: string;
+  dimensionText?: string;
+  columnShape?: 'square' | 'circle' | 'i_beam';
+  furnitureType?: 'bed' | 'sofa' | 'table' | 'toilet' | 'sink' | 'desk';
+  scaleUnit?: 'm' | 'mm' | 'ft' | 'in';
 }
 
 export interface FlowNode extends Node {
@@ -82,9 +106,12 @@ export interface DiagramData {
   pages?: DiagramPage[];
   activePageIndex?: number;
   canvasBg?: string;
-  gridType?: 'dots' | 'lines' | 'none';
+  gridType?: 'dots' | 'lines' | 'none' | 'blueprint' | 'engineering';
   pageView?: boolean;
   originalImageUrl?: string;
+  studioMode?: 'flowchart' | 'architecture';
+  measurementUnit?: 'metric' | 'imperial';
+  scaleRatio?: number;
 }
 
 export interface Point {

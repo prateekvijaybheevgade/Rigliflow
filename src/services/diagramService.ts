@@ -24,9 +24,10 @@ export interface FirestoreDiagramDoc {
   pages?: any[];
   activePageIndex?: number;
   canvasBg?: string;
-  gridType?: 'dots' | 'lines' | 'none';
+  gridType?: 'dots' | 'lines' | 'none' | 'blueprint' | 'engineering';
   pageView?: boolean;
   originalImageUrl?: string;
+  studioMode?: 'flowchart' | 'architecture';
   createdAt?: any;
   updatedAt?: any;
 }
@@ -43,7 +44,7 @@ export interface DiagramVersion {
   pages?: any[];
   activePageIndex?: number;
   canvasBg?: string;
-  gridType?: 'dots' | 'lines' | 'none';
+  gridType?: 'dots' | 'lines' | 'none' | 'blueprint' | 'engineering';
   pageView?: boolean;
   versionNote?: string;
   nodeCount: number;
