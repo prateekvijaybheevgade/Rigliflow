@@ -45,14 +45,20 @@ async function generateWithModelFallback(ai: GoogleGenAI, payload: any) {
   let lastError: any;
   for (const model of CANDIDATE_GEMINI_MODELS) {
     try {
-      const res = await ai.models.generateContent({
-        ...payload,
-        model,
-      });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout on model ${model}`)), 14000)
+      );
+      const res = (await Promise.race([
+        ai.models.generateContent({
+          ...payload,
+          model,
+        }),
+        timeoutPromise,
+      ])) as any;
       return res;
     } catch (err: any) {
       lastError = err;
-      console.warn(`[Gemini] Model ${model} unavailable (${err.message || err.status}), falling back to next candidate...`);
+      console.warn(`[Gemini] Model ${model} unavailable (${err?.message || err?.status}), falling back to next candidate...`);
     }
   }
   throw lastError;

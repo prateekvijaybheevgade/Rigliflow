@@ -391,10 +391,11 @@ function compressImage(
           if (rawText.includes('FUNCTION_INVOCATION_TIMEOUT') || response.status === 504) {
             throw new Error('Analysis timed out on server. Please try with a smaller image or retry.');
           }
-          if (rawText.includes('A server error') || response.status >= 500) {
-            throw new Error('Server error occurred during AI analysis. Please ensure GEMINI_API_KEY is configured in your project settings.');
+          if (response.status === 413 || rawText.includes('Payload Too Large')) {
+            throw new Error('Image file is too large for the server. Please try a smaller photo or crop it.');
           }
-          throw new Error(`Server returned error status ${response.status}. Please try again.`);
+          const cleanSnippet = rawText.replace(/<[^>]*>/g, '').trim().slice(0, 120);
+          throw new Error(`Server returned status ${response.status}${cleanSnippet ? `: ${cleanSnippet}` : ''}. Please retry.`);
         }
         throw new Error('Invalid response received from server. Please retry.');
       }

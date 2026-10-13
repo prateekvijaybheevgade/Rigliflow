@@ -22,18 +22,57 @@ export function getGeminiClient() {
   });
 }
 
+export async function parseRequestBody(req: any): Promise<any> {
+  if (req.body && typeof req.body === 'object') {
+    return req.body;
+  }
+  if (typeof req.body === 'string') {
+    try {
+      return JSON.parse(req.body);
+    } catch {
+      return {};
+    }
+  }
+  return new Promise((resolve) => {
+    let data = '';
+    req.on('data', (chunk: any) => {
+      data += chunk;
+    });
+    req.on('end', () => {
+      try {
+        resolve(data ? JSON.parse(data) : {});
+      } catch {
+        resolve({});
+      }
+    });
+    req.on('error', () => resolve({}));
+  });
+}
+
+export function setCorsHeaders(res: any) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+}
+
 export async function generateWithModelFallback(ai: GoogleGenAI, payload: any) {
   let lastError: any;
   for (const model of CANDIDATE_GEMINI_MODELS) {
     try {
-      const res = await ai.models.generateContent({
-        ...payload,
-        model,
-      });
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout on model ${model}`)), 14000)
+      );
+      const res = (await Promise.race([
+        ai.models.generateContent({
+          ...payload,
+          model,
+        }),
+        timeoutPromise,
+      ])) as any;
       return res;
     } catch (err: any) {
       lastError = err;
-      console.warn(`[Gemini] Model ${model} encountered error, trying next candidate...`);
+      console.warn(`[Gemini] Model ${model} encountered error:`, err?.message || err);
     }
   }
   throw lastError;

@@ -1,4 +1,10 @@
-import { getGeminiClient, cleanJsonResponse, generateWithModelFallback } from './_gemini';
+import {
+  getGeminiClient,
+  cleanJsonResponse,
+  generateWithModelFallback,
+  parseRequestBody,
+  setCorsHeaders,
+} from './_gemini';
 
 function generateSynthesizedDiagramFromSketch(userInstructions?: string) {
   const instr = (userInstructions || '').toLowerCase();
@@ -58,6 +64,7 @@ function generateSynthesizedDiagramFromSketch(userInstructions?: string) {
 }
 
 export default async function handler(req: any, res: any) {
+  setCorsHeaders(res);
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -65,11 +72,20 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  let body: any = {};
   try {
-    const { imageBase64, mimeType = 'image/png', additionalInstructions } = req.body || {};
+    body = await parseRequestBody(req);
+    const imageBase64 = body?.imageBase64 || body?.image;
+    const mimeType = body?.mimeType || 'image/png';
+    const additionalInstructions = body?.additionalInstructions || body?.userInstructions;
 
     if (!imageBase64) {
-      return res.status(400).json({ error: 'Missing imageBase64 payload' });
+      const fallback = generateSynthesizedDiagramFromSketch(additionalInstructions);
+      return res.status(200).json({
+        success: true,
+        diagram: fallback,
+        warning: 'Missing image payload, generated synthesized layout',
+      });
     }
 
     const base64Data = imageBase64.replace(/^data:[a-zA-Z0-9/+-]+;base64,/, '');
@@ -180,7 +196,7 @@ ${additionalInstructions ? `User extra guidance: ${additionalInstructions}` : ''
   } catch (error: any) {
     console.error('Error analyzing diagram with Gemini (using resilient vision synthesizer):', error);
     const fallback = generateSynthesizedDiagramFromSketch(
-      req.body?.additionalInstructions || req.body?.userInstructions
+      body?.additionalInstructions || body?.userInstructions
     );
     return res.status(200).json({
       success: true,
