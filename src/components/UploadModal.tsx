@@ -323,13 +323,38 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to analyze diagram');
+      const rawText = await response.text();
+      let resData: any = null;
+
+      try {
+        resData = JSON.parse(rawText);
+      } catch {
+        // Handle non-JSON responses like Vercel error pages or timeouts
+        if (!response.ok) {
+          if (rawText.includes('FUNCTION_INVOCATION_TIMEOUT') || response.status === 504) {
+            throw new Error('Analysis timed out on server. Please try with a smaller image or retry.');
+          }
+          if (rawText.includes('A server error') || response.status >= 500) {
+            throw new Error('Server error occurred during AI analysis. Please ensure GEMINI_API_KEY is configured in your project settings.');
+          }
+          throw new Error(`Server returned error status ${response.status}. Please try again.`);
+        }
+        throw new Error('Invalid response received from server. Please retry.');
       }
 
-      const resData = await response.json();
-      const analyzedDiagram: DiagramData = resData.diagram || resData;
+      if (!response.ok) {
+        throw new Error(
+          resData?.error ||
+          resData?.message ||
+          `Failed to analyze diagram (${response.status})`
+        );
+      }
+
+      const analyzedDiagram: DiagramData = resData?.diagram || resData;
+      if (!analyzedDiagram || (!Array.isArray(analyzedDiagram.nodes) && !analyzedDiagram.title)) {
+        throw new Error('Could not parse structural nodes from image. Please ensure photo is clear and retry.');
+      }
+
       onSuccess(analyzedDiagram, selectedImage);
       onClose();
     } catch (err: any) {
