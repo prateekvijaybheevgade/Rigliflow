@@ -82,14 +82,15 @@ export const EdgeComponent: React.FC<EdgeComponentProps> = ({
         strokeDasharray={strokeDash}
         strokeLinecap="round"
         strokeLinejoin="round"
-        markerEnd={`url(#arrow-head-${edge.id})`}
+        markerEnd={edge.arrow === 'none' ? undefined : `url(#arrow-head-${edge.id})`}
+        markerStart={edge.arrow === 'both' ? `url(#arrow-start-${edge.id})` : undefined}
         onClick={(e) => {
           e.stopPropagation();
           onSelect(edge.id);
         }}
       />
 
-      {/* Edge Arrowhead Marker */}
+      {/* Edge Arrowhead Markers */}
       <defs>
         <marker
           id={`arrow-head-${edge.id}`}
@@ -101,6 +102,17 @@ export const EdgeComponent: React.FC<EdgeComponentProps> = ({
           orient="auto-start-reverse"
         >
           <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill={strokeColor} />
+        </marker>
+        <marker
+          id={`arrow-start-${edge.id}`}
+          viewBox="0 0 10 10"
+          refX="3"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
+          <path d="M 8 1.5 L 0 5 L 8 8.5 z" fill={strokeColor} />
         </marker>
       </defs>
 

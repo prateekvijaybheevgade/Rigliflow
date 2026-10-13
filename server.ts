@@ -99,42 +99,49 @@ Calculate clean layout positions (X and Y coordinates) for the canvas:
 - Keep standard node dimensions: typically width 180-220, height 70-95 (diamonds/decisions can be 160x100).
 - Assign ports ('top', 'bottom', 'left', 'right') to edges naturally based on node flow direction.
 - Choose node types:
+  - 'cylinder': Network routers, switches, cylindrical disks/nodes (e.g. Cisco routers R1, R2, appliances)
+  - 'server': Physical servers, rack nodes, gateways, hosts, firewalls
+  - 'cloud': Cloud subnets, WAN, Internet, VPCs, external networks
+  - 'note': Sticky notes, annotations, reference notes, parameters (e.g. "Ref Bandwidth = 100 Gbps")
   - 'start_end': Start, End, Return, Terminate, Launch (pill/oval)
   - 'process': Rectangular action, step, calculation, mutation
   - 'decision': Diamond check, condition, branching question (e.g. "Valid?", "Approved?")
   - 'database': Cylinder database, cache, store, PostgreSQL, Redis, Mongo
-  - 'cloud': Cloud service, external API, microservice, SaaS, third-party
   - 'io': Parallelogram user input, payload read, display output, notification
   - 'document': Document, invoice, report, PDF, log file
   - 'subprocess': Double-bordered predefined flow or external module
-  - 'note': Sticky note comment or explanation
+
+- Edge Arrows & Connections:
+  - Bidirectional communication or two-way network links (e.g. between routers, switches, devices): set "arrow": "both".
+  - One-way directional flows: set "arrow": "end".
+  - Lines without arrowheads: set "arrow": "none".
 
 - Assign theme colors based on role or original visual cues:
-  - blue: '#3B82F6' (standard process)
-  - emerald/green: '#10B981' (success / start / approved)
-  - amber/orange: '#F59E0B' (decision / pending / review)
+  - blue: '#3B82F6' (standard process / router)
+  - emerald/green: '#10B981' (success / start / approved / active interface)
+  - amber/orange: '#F59E0B' (decision / pending / note / reference)
   - red/rose: '#EF4444' (error / failure / termination / reject)
   - purple: '#8B5CF6' (database / service / auth)
-  - sky: '#0EA5E9' (cloud / network / API)
+  - sky: '#0EA5E9' (cloud / network / API / subnet)
   - slate: '#64748B' (neutral / document / note)
 
 Output valid JSON matching this schema:
 {
-  "title": "Diagram Title",
-  "description": "Brief description of the detected process or flow",
+  "title": "Exact title detected in diagram (e.g., 'OSPF Network Topology (Area 0)')",
+  "description": "Brief description of the detected process or network topology",
   "direction": "top-down" | "left-right",
   "nodes": [
     {
       "id": "node_1",
-      "type": "start_end" | "process" | "decision" | "database" | "cloud" | "io" | "document" | "subprocess" | "note",
-      "label": "Primary Label",
-      "sublabel": "Optional secondary description or detail",
+      "type": "cylinder" | "server" | "cloud" | "note" | "start_end" | "process" | "decision" | "database" | "io" | "document" | "subprocess",
+      "label": "Primary Label (e.g., 'Router R1', 'Subnet: 192.168.4.0/24')",
+      "sublabel": "Optional secondary detail (e.g. 'fa0/0, gi0/1' or 'Area 0')",
       "x": number,
       "y": number,
       "width": number,
       "height": number,
       "color": "hex color string like #3B82F6",
-      "icon": "Lucide icon name, e.g. Play, User, CheckCircle, Database, Cloud, AlertCircle, FileText, Send, Lock, Search, RefreshCw, XCircle"
+      "icon": "Lucide icon name, e.g. Router, Server, Network, Cloud, Cpu, Play, CheckCircle, Database, AlertCircle, FileText, Lock"
     }
   ],
   "edges": [
@@ -144,8 +151,9 @@ Output valid JSON matching this schema:
       "to": "node_id",
       "fromPort": "bottom" | "top" | "left" | "right",
       "toPort": "top" | "bottom" | "left" | "right",
-      "label": "Optional label like Yes, No, 200 OK, Retry",
+      "label": "Optional link label (e.g., '1 Gbps', '10 Gbps', '100 Mbps', 'Yes', 'No')",
       "style": "solid" | "dashed",
+      "arrow": "both" | "end" | "none",
       "curveType": "orthogonal" | "smooth" | "straight",
       "color": "#64748B"
     }
