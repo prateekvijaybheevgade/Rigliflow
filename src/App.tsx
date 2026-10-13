@@ -136,6 +136,7 @@ function FlowlifyApp() {
 
   // Modals & Panels
   const [isUploadModalOpen, setIsUploadModalOpen] = useState<boolean>(false);
+  const [uploadModalTab, setUploadModalTab] = useState<'upload' | 'camera'>('upload');
   const [isAIPromptModalOpen, setIsAIPromptModalOpen] = useState<boolean>(false);
   const [isCompareDrawerOpen, setIsCompareDrawerOpen] = useState<boolean>(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState<boolean>(false);
@@ -1129,6 +1130,7 @@ function FlowlifyApp() {
           onClose={() => setIsUploadModalOpen(false)}
           onSuccess={handleUploadSuccess}
           initialMode={diagram.studioMode || 'flowchart'}
+          initialTab={uploadModalTab}
         />
       </>
     );
@@ -1151,7 +1153,10 @@ function FlowlifyApp() {
       <Toolbar
         diagram={diagram}
         onUpdateTitle={(title) => setDiagram((prev) => ({ ...prev, title }))}
-        onOpenUploadModal={() => setIsUploadModalOpen(true)}
+        onOpenUploadModal={(tab) => {
+          setUploadModalTab(tab || 'upload');
+          setIsUploadModalOpen(true);
+        }}
         onOpenAIPromptModal={() => setIsAIPromptModalOpen(true)}
         onAutoLayout={handleAutoLayout}
         onUndo={handleUndo}
@@ -1435,12 +1440,13 @@ function FlowlifyApp() {
         )}
       </div>
 
-      {/* Image Upload & AI Flowchart Vision Modal */}
+      {/* Image Upload & AI Flowchart Vision Modal (With Live Camera Capture) */}
       <UploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onSuccess={handleUploadSuccess}
         initialMode={diagram.studioMode || 'flowchart'}
+        initialTab={uploadModalTab}
       />
 
       {/* AI Assistant Modal for prompt generation & refinement */}

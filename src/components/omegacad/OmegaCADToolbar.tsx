@@ -25,6 +25,7 @@ import {
   Box,
   Mountain,
   Columns,
+  Camera,
 } from 'lucide-react';
 import { UserButton } from '@clerk/react';
 import { CadDrawing, CadScale, CadUnit } from '../../types/omegacad';
@@ -44,7 +45,7 @@ interface OmegaCADToolbarProps {
   onZoomFit: () => void;
   orthoMode: boolean;
   onToggleOrtho: () => void;
-  onOpenScanModal: () => void;
+  onOpenScanModal?: (tab?: 'upload' | 'camera') => void;
   onToggleLayerPanel: () => void;
   isLayerPanelOpen: boolean;
   onBackToDashboard: () => void;
@@ -361,9 +362,21 @@ export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
           </div>
         )}
 
+        {/* Quick Camera Snap Rough Sketch Button */}
+        {onOpenScanModal && (
+          <button
+            onClick={() => onOpenScanModal('camera')}
+            className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-2xs transition-all cursor-pointer"
+            title="Snap a photo of your paper sketch or blueprint with your camera"
+          >
+            <Camera size={13} className="text-amber-500" />
+            <span className="hidden xl:inline">Snap Camera</span>
+          </button>
+        )}
+
         {/* AI Sketch-to-CAD Scanner Button (Matching Flowlify Studio Dark Pill) */}
         <button
-          onClick={onOpenScanModal}
+          onClick={() => onOpenScanModal?.('upload')}
           className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-xs transition-all cursor-pointer group"
           title="Reverse engineer hand-drawn sketch to CAD with Gemini Vision"
         >

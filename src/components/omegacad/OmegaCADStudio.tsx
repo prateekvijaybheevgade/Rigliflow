@@ -90,6 +90,7 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
   const [canvasTheme, setCanvasTheme] = useState<'light' | 'blueprint'>('light');
   const [isLayerPanelOpen, setIsLayerPanelOpen] = useState<boolean>(true);
   const [isScanModalOpen, setIsScanModalOpen] = useState<boolean>(false);
+  const [scanModalTab, setScanModalTab] = useState<'upload' | 'camera'>('upload');
   const [cliMessage, setCliMessage] = useState<string | undefined>();
   const [viewMode, setViewMode] = useState<'2d' | 'split' | '3d'>('2d');
 
@@ -510,6 +511,14 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
     } else if (cmd === 'SPLIT' || cmd === 'DUAL') {
       setViewMode('split');
       setCliMessage('Activated Split 2D Drafting + 3D Holographic Twin Mode');
+    } else if (cmd === 'CAMERA' || cmd === 'SNAP') {
+      setScanModalTab('camera');
+      setIsScanModalOpen(true);
+      setCliMessage('Opening Live Camera Sketch Scanner...');
+    } else if (cmd === 'SCAN' || cmd === 'UPLOAD') {
+      setScanModalTab('upload');
+      setIsScanModalOpen(true);
+      setCliMessage('Opening Blueprint Upload Scanner...');
     } else if (cmd === '2D' || cmd === 'PLAN') {
       setViewMode('2d');
       setCliMessage('Switched to 2D Precision Drafting Plan');
@@ -591,7 +600,10 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
         onZoomFit={() => setZoom(0.85)}
         orthoMode={orthoMode}
         onToggleOrtho={() => setOrthoMode(!orthoMode)}
-        onOpenScanModal={() => setIsScanModalOpen(true)}
+        onOpenScanModal={(tab) => {
+          setScanModalTab(tab || 'upload');
+          setIsScanModalOpen(true);
+        }}
         onToggleLayerPanel={() => setIsLayerPanelOpen(!isLayerPanelOpen)}
         isLayerPanelOpen={isLayerPanelOpen}
         onBackToDashboard={onBackToDashboard}
@@ -711,12 +723,13 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
         </>
       )}
 
-      {/* 4. AI SKETCH-TO-CAD SCANNER MODAL */}
+      {/* 4. AI SKETCH-TO-CAD SCANNER MODAL (With Live Camera & Upload) */}
       <UploadModal
         isOpen={isScanModalOpen}
         onClose={() => setIsScanModalOpen(false)}
         onSuccess={handleScanSuccess}
         initialMode="architecture"
+        initialTab={scanModalTab}
       />
     </div>
   );

@@ -40,6 +40,7 @@ import {
   Box,
   Sliders,
   Compass,
+  Camera,
 } from 'lucide-react';
 import { DiagramData } from '../types/flowchart';
 import { SAMPLE_DIAGRAMS, SampleTemplate } from '../utils/samples';
@@ -49,7 +50,7 @@ import { AuthButton } from './AuthButton';
 interface ToolbarProps {
   diagram: DiagramData;
   onUpdateTitle: (title: string) => void;
-  onOpenUploadModal: () => void;
+  onOpenUploadModal: (tab?: 'upload' | 'camera') => void;
   onOpenAIPromptModal: () => void;
   onAutoLayout: (direction: 'top-down' | 'left-right') => void;
   onUndo: () => void;
@@ -239,7 +240,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               </button>
               <div className="border-t border-slate-100 my-1" />
               <button
-                onClick={onOpenUploadModal}
+                onClick={() => onOpenUploadModal('upload')}
                 className="w-full text-left px-3 py-1.5 hover:bg-slate-50 text-slate-700 flex items-center gap-2.5 transition-colors cursor-pointer"
               >
                 <Upload size={13} className="text-slate-500" />
@@ -384,7 +385,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <div className="flex items-center bg-slate-100/80 p-0.5 rounded-lg border border-slate-200/80 shadow-[inset_0_1px_1px_rgba(0,0,0,0.02)]">
           {/* Upload Image / Sketch */}
           <button
-            onClick={onOpenUploadModal}
+            onClick={() => onOpenUploadModal('upload')}
             className={`flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-md shadow-xs border transition-all cursor-pointer ${
               diagram.studioMode === 'architecture'
                 ? 'border-cyan-300 text-cyan-900 hover:border-cyan-400 bg-cyan-50/40'
@@ -407,6 +408,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <span className="sm:hidden">
               {diagram.studioMode === 'architecture' ? 'Scan' : 'Upload'}
             </span>
+          </button>
+
+          {/* Quick Camera Snap Rough Sketch Button */}
+          <button
+            onClick={() => onOpenUploadModal('camera')}
+            className="flex items-center gap-1.5 text-slate-700 hover:text-slate-900 hover:bg-white text-xs font-medium px-2 py-1.5 rounded-md transition-all cursor-pointer"
+            title="Snap a photo of your paper sketch or whiteboard with camera"
+          >
+            <Camera size={13} className="text-amber-500" />
+            <span className="hidden sm:inline">Camera</span>
           </button>
 
           {/* AI Prompt Architect */}
