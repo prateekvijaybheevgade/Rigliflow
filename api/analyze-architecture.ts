@@ -7,10 +7,10 @@ const CANDIDATE_GEMINI_MODELS = [
   'gemini-3.7-flash',
 ];
 
-function getGeminiClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
+function getGeminiClient(customApiKey?: string) {
+  const apiKey = (customApiKey || '').trim() || process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not set in environment.');
+    throw new Error('GEMINI_API_KEY is not configured. Please enter your API key or configure it in Vercel settings.');
   }
   return new GoogleGenAI({
     apiKey,
@@ -267,41 +267,42 @@ Extract all spatial elements and reverse-engineer them into clean, precise, orth
   "edges": []
 }`;
 
-    let diagramData: any;
+    const apiKey = (body?.apiKey || '').trim() || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(400).json({
+        error: 'GEMINI_API_KEY is not configured on the server. Please enter your Gemini API key in the Upload settings or add GEMINI_API_KEY to your Vercel Project Settings.',
+      });
+    }
 
-    if (process.env.GEMINI_API_KEY) {
-      const ai = getGeminiClient();
-      const promptText = `Analyze this architectural floor plan sketch or technical drawing in detail. Detect all rooms, walls, doors, windows, dimensions, structural columns, and furniture. Reverse engineer it into a precise, editable 2D CAD architectural blueprint layout.
+    const ai = getGeminiClient(apiKey);
+    const promptText = `Analyze this architectural floor plan sketch or technical drawing in detail. Detect all rooms, walls, doors, windows, dimensions, structural columns, and furniture. Reverse engineer it into a precise, editable 2D CAD architectural blueprint layout.
 ${additionalInstructions ? `User extra guidance: ${additionalInstructions}` : ''}`;
 
-      const response = await generateWithModelFallback(ai, {
-        contents: [
-          {
-            parts: [
-              {
-                inlineData: {
-                  data: base64Data,
-                  mimeType: mimeType || 'image/png',
-                },
+    const response = await generateWithModelFallback(ai, {
+      contents: [
+        {
+          parts: [
+            {
+              inlineData: {
+                data: base64Data,
+                mimeType: mimeType || 'image/png',
               },
-              {
-                text: promptText,
-              },
-            ],
-          },
-        ],
-        config: {
-          systemInstruction: architectureSystemInstruction,
-          responseMimeType: 'application/json',
-          temperature: 0.2,
+            },
+            {
+              text: promptText,
+            },
+          ],
         },
-      });
+      ],
+      config: {
+        systemInstruction: architectureSystemInstruction,
+        responseMimeType: 'application/json',
+        temperature: 0.2,
+      },
+    });
 
-      const text = response.text || '{}';
-      diagramData = cleanJsonResponse(text);
-    } else {
-      diagramData = generateSynthesizedArchitecturePlan(additionalInstructions);
-    }
+    const text = response.text || '{}';
+    const diagramData = cleanJsonResponse(text);
 
     return res.status(200).json({
       success: true,
@@ -309,13 +310,8 @@ ${additionalInstructions ? `User extra guidance: ${additionalInstructions}` : ''
     });
   } catch (error: any) {
     console.error('Error analyzing architecture with Gemini in serverless function:', error);
-    const fallback = generateSynthesizedArchitecturePlan(
-      body?.additionalInstructions || body?.userInstructions
-    );
-    return res.status(200).json({
-      success: true,
-      diagram: fallback,
-      warning: error.message || 'Processed with fallback architectural synthesizer',
+    return res.status(500).json({
+      error: `Gemini CAD analysis error: ${error?.message || 'Failed to analyze floor plan'}. Please check your API key or image clarity.`,
     });
   }
 }

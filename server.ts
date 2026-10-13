@@ -25,11 +25,10 @@ export const CANDIDATE_GEMINI_MODELS = [
   'gemini-3.7-flash',
 ];
 
-// Helper to initialize Gemini client with required headers
-function getGeminiClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
+function getGeminiClient(customApiKey?: string) {
+  const apiKey = (customApiKey || '').trim() || process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not set in environment.');
+    throw new Error('GEMINI_API_KEY is not configured.');
   }
   return new GoogleGenAI({
     apiKey,
@@ -78,16 +77,21 @@ function cleanJsonResponse(rawText: string): any {
 // Analyze image / diagram to structured flowchart
 app.post('/api/analyze-diagram', async (req, res) => {
   try {
-    const { imageBase64, mimeType = 'image/png', additionalInstructions } = req.body;
+    const { imageBase64, mimeType = 'image/png', additionalInstructions, apiKey: customApiKey } = req.body;
 
     if (!imageBase64) {
       return res.status(400).json({ error: 'Missing imageBase64 payload' });
     }
 
+    const apiKey = (customApiKey || '').trim() || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(400).json({ error: 'GEMINI_API_KEY is not configured.' });
+    }
+
     // Strip data URL prefix if present
     const base64Data = imageBase64.replace(/^data:[a-zA-Z0-9/+-]+;base64,/, '');
 
-    const ai = getGeminiClient();
+    const ai = getGeminiClient(apiKey);
 
     const systemInstruction = `You are a world-class diagram understanding and reverse-engineering engine.
 Your task is to analyze ANY uploaded image — whether it is a hand-drawn whiteboard sketch, hand-drawn paper sketch, screenshot, architecture diagram, flow chart, system map, business workflow, or entity graph.

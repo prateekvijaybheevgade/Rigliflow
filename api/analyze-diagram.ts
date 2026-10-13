@@ -7,10 +7,10 @@ const CANDIDATE_GEMINI_MODELS = [
   'gemini-3.7-flash',
 ];
 
-function getGeminiClient() {
-  const apiKey = process.env.GEMINI_API_KEY;
+function getGeminiClient(customApiKey?: string) {
+  const apiKey = (customApiKey || '').trim() || process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error('GEMINI_API_KEY is not set in environment.');
+    throw new Error('GEMINI_API_KEY is not configured. Please enter your API key or configure it in Vercel settings.');
   }
   return new GoogleGenAI({
     apiKey,
@@ -247,52 +247,48 @@ Output valid JSON matching this schema:
     const promptText = `Analyze this diagram/image in detail. Detect every block, text label, diamond decision, database, connection, arrow, and label. Reverse engineer it into a clean, beautiful, high-precision editable flowchart JSON structure.
 ${additionalInstructions ? `User extra guidance: ${additionalInstructions}` : ''}`;
 
-    let diagramData: any;
-
-    if (process.env.GEMINI_API_KEY) {
-      const ai = getGeminiClient();
-      const response = await generateWithModelFallback(ai, {
-        contents: [
-          {
-            parts: [
-              {
-                inlineData: {
-                  data: base64Data,
-                  mimeType: mimeType || 'image/png',
-                },
-              },
-              {
-                text: promptText,
-              },
-            ],
-          },
-        ],
-        config: {
-          systemInstruction,
-          responseMimeType: 'application/json',
-          temperature: 0.2,
-        },
+    const apiKey = (body?.apiKey || '').trim() || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return res.status(400).json({
+        error: 'GEMINI_API_KEY is not configured on the server. Please enter your Gemini API key in the Upload settings or add GEMINI_API_KEY to your Vercel Project Settings.',
       });
-
-      const text = response.text || '{}';
-      diagramData = cleanJsonResponse(text);
-    } else {
-      diagramData = generateSynthesizedDiagramFromSketch(additionalInstructions);
     }
+
+    const ai = getGeminiClient(apiKey);
+    const response = await generateWithModelFallback(ai, {
+      contents: [
+        {
+          parts: [
+            {
+              inlineData: {
+                data: base64Data,
+                mimeType: mimeType || 'image/png',
+              },
+            },
+            {
+              text: promptText,
+            },
+          ],
+        },
+      ],
+      config: {
+        systemInstruction,
+        responseMimeType: 'application/json',
+        temperature: 0.2,
+      },
+    });
+
+    const text = response.text || '{}';
+    const diagramData = cleanJsonResponse(text);
 
     return res.status(200).json({
       success: true,
       diagram: diagramData,
     });
   } catch (error: any) {
-    console.error('Error analyzing diagram with Gemini (using resilient vision synthesizer):', error);
-    const fallback = generateSynthesizedDiagramFromSketch(
-      body?.additionalInstructions || body?.userInstructions
-    );
-    return res.status(200).json({
-      success: true,
-      diagram: fallback,
-      warning: error.message || 'Processed with resilient sketch analyzer',
+    console.error('Error analyzing diagram with Gemini:', error);
+    return res.status(500).json({
+      error: `Gemini AI analysis error: ${error?.message || 'Failed to analyze diagram'}. Please check your API key or image clarity.`,
     });
   }
 }

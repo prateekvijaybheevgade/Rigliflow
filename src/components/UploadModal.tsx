@@ -51,6 +51,14 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState(0);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [userApiKey, setUserApiKey] = useState<string>(() => {
+    try {
+      return localStorage.getItem('flowlify_gemini_api_key') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [showApiKeySetting, setShowApiKeySetting] = useState(false);
 
   // Camera State
   const [isCameraActive, setIsCameraActive] = useState<boolean>(false);
@@ -377,6 +385,7 @@ function compressImage(
           mimeType,
           userInstructions: instructions,
           additionalInstructions: instructions,
+          apiKey: userApiKey.trim() || undefined,
         }),
       });
 
@@ -541,9 +550,33 @@ function compressImage(
           )}
 
           {errorMsg && (
-            <div className="flex items-center gap-2 p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl">
-              <AlertCircle size={15} className="shrink-0" />
-              <span>{errorMsg}</span>
+            <div className="flex flex-col gap-2 p-3 text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl">
+              <div className="flex items-center gap-2">
+                <AlertCircle size={15} className="shrink-0 text-rose-600" />
+                <span className="font-medium">{errorMsg}</span>
+              </div>
+              {errorMsg.toLowerCase().includes('gemini_api_key') && (
+                <div className="mt-1 pt-2 border-t border-rose-200/80 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <input
+                    type="password"
+                    placeholder="Paste Gemini API key (AQ.Ab... or AIza...)"
+                    value={userApiKey}
+                    onChange={(e) => {
+                      const key = e.target.value.trim();
+                      setUserApiKey(key);
+                      localStorage.setItem('flowlify_gemini_api_key', key);
+                    }}
+                    className="flex-1 px-3 py-1.5 bg-white border border-rose-300 rounded-lg text-slate-800 text-xs focus:outline-none focus:ring-1 focus:ring-rose-500 font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAnalyze}
+                    className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold text-xs transition-colors shrink-0 cursor-pointer"
+                  >
+                    Save & Retry
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -874,6 +907,51 @@ function compressImage(
               }
               className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-700"
             />
+          </div>
+
+          {/* Optional Gemini API Key configuration */}
+          <div className="pt-0.5">
+            <button
+              type="button"
+              onClick={() => setShowApiKeySetting(!showApiKeySetting)}
+              className="text-[11px] text-slate-500 hover:text-slate-800 flex items-center gap-1 font-medium transition-colors cursor-pointer"
+            >
+              <span>{showApiKeySetting ? '▾' : '▸'} Custom Gemini API Key</span>
+              {userApiKey ? (
+                <span className="text-emerald-600 font-semibold text-[10px] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                  Key configured
+                </span>
+              ) : (
+                <span className="text-slate-400 text-[10px]">(Optional client override)</span>
+              )}
+            </button>
+            {showApiKeySetting && (
+              <div className="mt-1.5 p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center gap-2 animate-in fade-in duration-100">
+                <input
+                  type="password"
+                  placeholder="Paste Gemini API key (AQ.Ab... or AIza...)"
+                  value={userApiKey}
+                  onChange={(e) => {
+                    const val = e.target.value.trim();
+                    setUserApiKey(val);
+                    localStorage.setItem('flowlify_gemini_api_key', val);
+                  }}
+                  className="flex-1 px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-mono text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                {userApiKey && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUserApiKey('');
+                      localStorage.removeItem('flowlify_gemini_api_key');
+                    }}
+                    className="text-[11px] text-rose-500 hover:text-rose-700 px-2 py-1 font-medium cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Loading Animation Status */}
