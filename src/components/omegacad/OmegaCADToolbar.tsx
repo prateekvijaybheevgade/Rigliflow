@@ -22,6 +22,8 @@ import {
   Sun,
   Moon,
   Image as ImageIcon,
+  Box,
+  Mountain,
 } from 'lucide-react';
 import { CadDrawing, CadScale, CadUnit } from '../../types/omegacad';
 import { downloadDxf } from '../../utils/dxfExport';
@@ -47,6 +49,8 @@ interface OmegaCADToolbarProps {
   onBackToHome: () => void;
   canvasTheme?: 'light' | 'blueprint';
   onToggleCanvasTheme?: () => void;
+  viewMode?: '2d' | '3d';
+  onToggleViewMode?: (mode: '2d' | '3d') => void;
 }
 
 export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
@@ -70,6 +74,8 @@ export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
   onBackToHome,
   canvasTheme = 'light',
   onToggleCanvasTheme,
+  viewMode = '2d',
+  onToggleViewMode,
 }) => {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -309,6 +315,35 @@ export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
             <Maximize2 size={13} />
           </button>
         </div>
+
+        {/* 2D / 3D Holographic View Mode Segmented Switcher */}
+        {onToggleViewMode && (
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+            <button
+              onClick={() => onToggleViewMode('2d')}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === '2d'
+                  ? 'bg-white text-blue-600 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+              title="2D Precision CAD Drafting Blueprint"
+            >
+              <span>2D Plan</span>
+            </button>
+            <button
+              onClick={() => onToggleViewMode('3d')}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                viewMode === '3d'
+                  ? 'bg-gradient-to-r from-emerald-600 to-cyan-600 text-white shadow-xs'
+                  : 'text-slate-700 hover:text-emerald-600'
+              }`}
+              title="3D Holographic Digital Twin & Topological Elevation View"
+            >
+              <Mountain size={12} className={viewMode === '3d' ? 'text-white' : 'text-emerald-600'} />
+              <span>3D Hologram</span>
+            </button>
+          </div>
+        )}
 
         {/* AI Sketch-to-CAD Scanner Button (Matching Flowlify Studio Dark Pill) */}
         <button

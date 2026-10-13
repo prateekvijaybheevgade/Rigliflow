@@ -13,6 +13,7 @@ import { OmegaCADCommandLine } from './OmegaCADCommandLine';
 import { UploadModal } from '../UploadModal';
 import { DiagramData } from '../../types/flowchart';
 import { downloadDxf } from '../../utils/dxfExport';
+import { OmegaCAD3DViewer } from './OmegaCAD3DViewer';
 
 interface OmegaCADStudioProps {
   onBackToHome: () => void;
@@ -80,6 +81,7 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
   const [isLayerPanelOpen, setIsLayerPanelOpen] = useState<boolean>(true);
   const [isScanModalOpen, setIsScanModalOpen] = useState<boolean>(false);
   const [cliMessage, setCliMessage] = useState<string | undefined>();
+  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
 
   const pushHistory = useCallback(
     (current: CadDrawing) => {
@@ -492,6 +494,12 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
     } else if (cmd === 'DXF') {
       downloadDxf(drawing);
       setCliMessage('Exported AutoCAD AC1015 DXF blueprint!');
+    } else if (cmd === '3D' || cmd === 'RENDER' || cmd === 'VIEW3D') {
+      setViewMode('3d');
+      setCliMessage('Switched to 3D Holographic Digital Twin View');
+    } else if (cmd === '2D' || cmd === 'PLAN') {
+      setViewMode('2d');
+      setCliMessage('Switched to 2D Precision Drafting Plan');
     } else if (cmd === 'HELP' || cmd === '?') {
       setCliMessage('Commands: WALL, DOOR, WIN, COL, STAIR, ROOM, DIM, WC, LIGHT, TREE, OFFSET, MIRROR, ARRAY, AUTODIM, ROTATE, DXF');
     } else {
@@ -579,63 +587,76 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
         onToggleCanvasTheme={() =>
           setCanvasTheme((t) => (t === 'light' ? 'blueprint' : 'light'))
         }
+        viewMode={viewMode}
+        onToggleViewMode={setViewMode}
       />
 
-      {/* 2. MAIN CAD WORKSPACE */}
-      <div className="flex flex-1 h-[calc(100vh-3.5rem-2.25rem)] relative overflow-hidden">
-        {/* Left: Tool Ribbon & 100+ CAD Blocks Library */}
-        <OmegaCADRibbon
-          onAddCadEntity={handleAddEntity}
-          onOpenScanModal={() => setIsScanModalOpen(true)}
-        />
-
-        {/* Center: Precision CAD Drafting Canvas with Floating Micro-Tools */}
-        <OmegaCADCanvas
-          drawing={drawing}
-          selectedEntityId={selectedEntityId}
-          onSelectEntity={setSelectedEntityId}
-          onUpdateEntityPosition={handleUpdateEntityPosition}
-          onUpdateEntityDimensions={handleUpdateEntityDimensions}
-          onRotateEntity={handleRotateEntity}
-          onDuplicateEntity={handleDuplicateEntity}
-          onDeleteEntity={handleDeleteEntity}
-          zoom={zoom}
-          onZoomChange={setZoom}
-          orthoMode={orthoMode}
-          canvasTheme={canvasTheme}
-          onZoomFit={() => setZoom(0.85)}
-          onOffsetEntity={handleOffsetEntity}
-          onMirrorEntity={handleMirrorEntity}
-          onArrayEntity={handleArrayEntity}
-          onAutoDimension={handleAutoDimension}
-          onIsolateLayer={handleIsolateLayer}
-          onRestoreAllLayers={handleRestoreAllLayers}
-        />
-
-        {/* Right: Layer Manager & Entity Inspector Panel */}
-        {isLayerPanelOpen && (
-          <OmegaCADLayerPanel
+      {/* 2. MAIN CAD WORKSPACE (2D Drafting Plan or 3D Holographic Twin) */}
+      {viewMode === '3d' ? (
+        <div className="flex-1 w-full h-[calc(100vh-3.5rem)] relative overflow-hidden">
+          <OmegaCAD3DViewer
             drawing={drawing}
-            selectedEntity={selectedEntity}
-            onUpdateDrawing={setDrawing}
-            onUpdateEntity={(id, partial) =>
-              setDrawing((prev) => ({
-                ...prev,
-                entities: prev.entities.map((e) => (e.id === id ? { ...e, ...partial } : e)),
-              }))
-            }
-            onDeleteEntity={handleDeleteEntity}
-            onClose={() => setIsLayerPanelOpen(false)}
+            onBackTo2D={() => setViewMode('2d')}
           />
-        )}
-      </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-1 h-[calc(100vh-3.5rem-2.25rem)] relative overflow-hidden">
+            {/* Left: Tool Ribbon & 100+ CAD Blocks Library */}
+            <OmegaCADRibbon
+              onAddCadEntity={handleAddEntity}
+              onOpenScanModal={() => setIsScanModalOpen(true)}
+            />
 
-      {/* 3. AUTOCAD COMMAND LINE & STATUS BAR (Flowlify Footer) */}
-      <OmegaCADCommandLine
-        onExecuteCommand={handleExecuteCommand}
-        lastMessage={cliMessage}
-        orthoMode={orthoMode}
-      />
+            {/* Center: Precision CAD Drafting Canvas with Floating Micro-Tools */}
+            <OmegaCADCanvas
+              drawing={drawing}
+              selectedEntityId={selectedEntityId}
+              onSelectEntity={setSelectedEntityId}
+              onUpdateEntityPosition={handleUpdateEntityPosition}
+              onUpdateEntityDimensions={handleUpdateEntityDimensions}
+              onRotateEntity={handleRotateEntity}
+              onDuplicateEntity={handleDuplicateEntity}
+              onDeleteEntity={handleDeleteEntity}
+              zoom={zoom}
+              onZoomChange={setZoom}
+              orthoMode={orthoMode}
+              canvasTheme={canvasTheme}
+              onZoomFit={() => setZoom(0.85)}
+              onOffsetEntity={handleOffsetEntity}
+              onMirrorEntity={handleMirrorEntity}
+              onArrayEntity={handleArrayEntity}
+              onAutoDimension={handleAutoDimension}
+              onIsolateLayer={handleIsolateLayer}
+              onRestoreAllLayers={handleRestoreAllLayers}
+            />
+
+            {/* Right: Layer Manager & Entity Inspector Panel */}
+            {isLayerPanelOpen && (
+              <OmegaCADLayerPanel
+                drawing={drawing}
+                selectedEntity={selectedEntity}
+                onUpdateDrawing={setDrawing}
+                onUpdateEntity={(id, partial) =>
+                  setDrawing((prev) => ({
+                    ...prev,
+                    entities: prev.entities.map((e) => (e.id === id ? { ...e, ...partial } : e)),
+                  }))
+                }
+                onDeleteEntity={handleDeleteEntity}
+                onClose={() => setIsLayerPanelOpen(false)}
+              />
+            )}
+          </div>
+
+          {/* 3. AUTOCAD COMMAND LINE & STATUS BAR (Flowlify Footer) */}
+          <OmegaCADCommandLine
+            onExecuteCommand={handleExecuteCommand}
+            lastMessage={cliMessage}
+            orthoMode={orthoMode}
+          />
+        </>
+      )}
 
       {/* 4. AI SKETCH-TO-CAD SCANNER MODAL */}
       <UploadModal
