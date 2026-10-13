@@ -29,42 +29,42 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
     projectNumber: 'C-2026-A101',
     scale: '1:50',
     unit: 'mm',
-    canvasBg: '#0B1E36',
+    canvasBg: '#F8FAFC',
     gridSize: 100,
     layers: DEFAULT_CAD_LAYERS,
     entities: [
       // Boundary Walls (9" Exterior Concrete)
-      { id: 'w_north', type: 'arch_wall', layerId: 'layer_wall', label: 'North Boundary Wall (9.0m)', x: 180, y: 100, width: 720, height: 22, color: '#38BDF8', wallThickness: 230, wallHatch: 'concrete' },
-      { id: 'w_south', type: 'arch_wall', layerId: 'layer_wall', label: 'South Boundary Wall (9.0m)', x: 180, y: 620, width: 720, height: 22, color: '#38BDF8', wallThickness: 230, wallHatch: 'concrete' },
-      { id: 'w_west', type: 'arch_wall', layerId: 'layer_wall', label: 'West Wall (5.2m)', x: 180, y: 122, width: 22, height: 498, color: '#38BDF8', wallThickness: 230, wallHatch: 'concrete' },
-      { id: 'w_east', type: 'arch_wall', layerId: 'layer_wall', label: 'East Wall (5.2m)', x: 878, y: 122, width: 22, height: 498, color: '#38BDF8', wallThickness: 230, wallHatch: 'concrete' },
+      { id: 'w_north', type: 'arch_wall', layerId: 'layer_wall', label: 'North Boundary Wall (9.0m)', x: 180, y: 100, width: 720, height: 22, color: '#334155', wallThickness: 230, wallHatch: 'concrete' },
+      { id: 'w_south', type: 'arch_wall', layerId: 'layer_wall', label: 'South Boundary Wall (9.0m)', x: 180, y: 620, width: 720, height: 22, color: '#334155', wallThickness: 230, wallHatch: 'concrete' },
+      { id: 'w_west', type: 'arch_wall', layerId: 'layer_wall', label: 'West Wall (5.2m)', x: 180, y: 122, width: 22, height: 498, color: '#334155', wallThickness: 230, wallHatch: 'concrete' },
+      { id: 'w_east', type: 'arch_wall', layerId: 'layer_wall', label: 'East Wall (5.2m)', x: 878, y: 122, width: 22, height: 498, color: '#334155', wallThickness: 230, wallHatch: 'concrete' },
       // Interior Partition Walls (4.5" Brick)
       { id: 'w_div_vert', type: 'arch_wall', layerId: 'layer_wall', label: 'Bedroom Partition Wall', x: 550, y: 122, width: 14, height: 350, color: '#475569', wallThickness: 115, wallHatch: 'brick' },
       { id: 'w_div_horiz', type: 'arch_wall', layerId: 'layer_wall', label: 'Kitchen Partition Wall', x: 202, y: 470, width: 348, height: 14, color: '#475569', wallThickness: 115, wallHatch: 'brick' },
       // Rooms
-      { id: 'room_living', type: 'arch_room', layerId: 'layer_room', label: 'Living & Dining Hall', sublabel: 'Polished Vitrified Tile', x: 210, y: 130, width: 330, height: 330, color: '#818CF8', roomArea: '22.5 m² (242 sq ft)' },
-      { id: 'room_bed', type: 'arch_room', layerId: 'layer_room', label: 'Master Bedroom Suite', sublabel: 'Hardwood Timber Floor', x: 574, y: 130, width: 294, height: 330, color: '#818CF8', roomArea: '18.2 m² (196 sq ft)' },
+      { id: 'room_living', type: 'arch_room', layerId: 'layer_room', label: 'Living & Dining Hall', sublabel: 'Polished Vitrified Tile', x: 210, y: 130, width: 330, height: 330, color: '#3B82F6', roomArea: '22.5 m² (242 sq ft)' },
+      { id: 'room_bed', type: 'arch_room', layerId: 'layer_room', label: 'Master Bedroom Suite', sublabel: 'Hardwood Timber Floor', x: 574, y: 130, width: 294, height: 330, color: '#6366F1', roomArea: '18.2 m² (196 sq ft)' },
       { id: 'room_kit', type: 'arch_room', layerId: 'layer_room', label: 'Modular Kitchen & Utility', sublabel: 'Granite Countertop', x: 210, y: 494, width: 240, height: 116, color: '#0D9488', roomArea: '7.2 m² (78 sq ft)' },
       { id: 'room_bath', type: 'arch_room', layerId: 'layer_room', label: 'Ensuite Bathroom', sublabel: 'Anti-skid Ceramic Tiles', x: 574, y: 494, width: 160, height: 116, color: '#0284C7', roomArea: '4.5 m² (48 sq ft)' },
       // Swing Doors
-      { id: 'door_main', type: 'arch_door', layerId: 'layer_door', label: 'Main Entry Door D1 (1000mm)', x: 320, y: 80, width: 80, height: 80, color: '#F59E0B' },
-      { id: 'door_bed', type: 'arch_door', layerId: 'layer_door', label: 'Bedroom Door D2 (900mm)', x: 520, y: 390, width: 70, height: 70, color: '#F59E0B' },
-      { id: 'door_bath', type: 'arch_door', layerId: 'layer_door', label: 'Bath Door D3 (750mm)', x: 580, y: 450, width: 65, height: 65, color: '#F59E0B' },
+      { id: 'door_main', type: 'arch_door', layerId: 'layer_door', label: 'Main Entry Door D1 (1000mm)', x: 320, y: 80, width: 80, height: 80, color: '#2563EB' },
+      { id: 'door_bed', type: 'arch_door', layerId: 'layer_door', label: 'Bedroom Door D2 (900mm)', x: 520, y: 390, width: 70, height: 70, color: '#2563EB' },
+      { id: 'door_bath', type: 'arch_door', layerId: 'layer_door', label: 'Bath Door D3 (750mm)', x: 580, y: 450, width: 65, height: 65, color: '#2563EB' },
       // Glazed Windows
       { id: 'win_living', type: 'arch_window', layerId: 'layer_window', label: 'Bay Window W1 (1800mm)', x: 420, y: 94, width: 110, height: 24, color: '#0284C7' },
       { id: 'win_bed', type: 'arch_window', layerId: 'layer_window', label: 'Glazed Window W2 (1200mm)', x: 700, y: 94, width: 90, height: 24, color: '#0284C7' },
       // Structural Columns
-      { id: 'col_nw', type: 'arch_column', layerId: 'layer_column', label: 'C1', x: 168, y: 88, width: 36, height: 36, color: '#F43F5E' },
-      { id: 'col_ne', type: 'arch_column', layerId: 'layer_column', label: 'C2', x: 878, y: 88, width: 36, height: 36, color: '#F43F5E' },
-      { id: 'col_mid', type: 'arch_column', layerId: 'layer_column', label: 'C3', x: 538, y: 88, width: 36, height: 36, color: '#F43F5E' },
-      { id: 'col_sw', type: 'arch_column', layerId: 'layer_column', label: 'C4', x: 168, y: 616, width: 36, height: 36, color: '#F43F5E' },
-      { id: 'col_se', type: 'arch_column', layerId: 'layer_column', label: 'C5', x: 878, y: 616, width: 36, height: 36, color: '#F43F5E' },
+      { id: 'col_nw', type: 'arch_column', layerId: 'layer_column', label: 'C1', x: 168, y: 88, width: 36, height: 36, color: '#0F172A' },
+      { id: 'col_ne', type: 'arch_column', layerId: 'layer_column', label: 'C2', x: 878, y: 88, width: 36, height: 36, color: '#0F172A' },
+      { id: 'col_mid', type: 'arch_column', layerId: 'layer_column', label: 'C3', x: 538, y: 88, width: 36, height: 36, color: '#0F172A' },
+      { id: 'col_sw', type: 'arch_column', layerId: 'layer_column', label: 'C4', x: 168, y: 616, width: 36, height: 36, color: '#0F172A' },
+      { id: 'col_se', type: 'arch_column', layerId: 'layer_column', label: 'C5', x: 878, y: 616, width: 36, height: 36, color: '#0F172A' },
       // Dimension Lines
-      { id: 'dim_total', type: 'arch_dimension', layerId: 'layer_dimension', label: '9.00 m (29\' 6")', dimensionText: 'TOTAL OVERALL SPAN: 9.00 m (29\' 6")', x: 180, y: 50, width: 720, height: 35, color: '#60A5FA' },
+      { id: 'dim_total', type: 'arch_dimension', layerId: 'layer_dimension', label: '9.00 m (29\' 6")', dimensionText: 'TOTAL OVERALL SPAN: 9.00 m (29\' 6")', x: 180, y: 50, width: 720, height: 35, color: '#2563EB' },
       // Furniture
-      { id: 'furn_bed', type: 'arch_furniture', layerId: 'layer_furniture', label: 'King Bed (1800×2000)', x: 670, y: 190, width: 130, height: 150, color: '#94A3B8', furnitureType: 'bed' },
+      { id: 'furn_bed', type: 'arch_furniture', layerId: 'layer_furniture', label: 'King Bed (1800×2000)', x: 670, y: 190, width: 130, height: 150, color: '#64748B', furnitureType: 'bed' },
       // Title Block
-      { id: 'titleblock', type: 'arch_titleblock', layerId: 'layer_title', label: 'OMEGACAD PLUS • 2BHK RESIDENTIAL SUITE', sublabel: 'SHEET A-101 • SCALE 1:50 METRIC', x: 460, y: 660, width: 440, height: 80, color: '#F8FAFC' },
+      { id: 'titleblock', type: 'arch_titleblock', layerId: 'layer_title', label: 'OMEGACAD PLUS • 2BHK RESIDENTIAL SUITE', sublabel: 'SHEET A-101 • SCALE 1:50 METRIC', x: 460, y: 660, width: 440, height: 80, color: '#0F172A' },
     ],
   });
 
@@ -76,6 +76,7 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
   const [selectedEntityId, setSelectedEntityId] = useState<string | null>(null);
   const [zoom, setZoom] = useState<number>(0.9);
   const [orthoMode, setOrthoMode] = useState<boolean>(true);
+  const [canvasTheme, setCanvasTheme] = useState<'light' | 'blueprint'>('light');
   const [isLayerPanelOpen, setIsLayerPanelOpen] = useState<boolean>(true);
   const [isScanModalOpen, setIsScanModalOpen] = useState<boolean>(false);
   const [cliMessage, setCliMessage] = useState<string | undefined>();
@@ -211,10 +212,10 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
       handleAddEntity({
         type: 'arch_wall',
         layerId: 'layer_wall',
-        label: 'Wall Segment',
+        label: 'Wall Segment (230mm)',
         width: 480,
-        height: 20,
-        color: '#38BDF8',
+        height: 22,
+        color: '#334155',
         wallThickness: 230,
         wallHatch: 'concrete',
       });
@@ -225,7 +226,7 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
         label: 'Door (900mm)',
         width: 80,
         height: 80,
-        color: '#F59E0B',
+        color: '#2563EB',
       });
     } else if (cmd === 'WINDOW' || cmd === 'WIN') {
       handleAddEntity({
@@ -243,57 +244,62 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
         label: 'Column C',
         width: 36,
         height: 36,
-        color: '#F43F5E',
+        color: '#0F172A',
       });
     } else if (cmd === 'ROOM' || cmd === 'R') {
       handleAddEntity({
         type: 'arch_room',
         layerId: 'layer_room',
-        label: 'Room Enclosure',
-        width: 320,
-        height: 260,
-        color: '#818CF8',
-        roomArea: '18.0 m² (194 sq ft)',
+        label: 'New Room Space',
+        width: 260,
+        height: 220,
+        color: '#3B82F6',
+        roomArea: '14.5 m² (156 sq ft)',
       });
     } else if (cmd === 'DIM' || cmd === 'DIMENSION') {
       handleAddEntity({
         type: 'arch_dimension',
         layerId: 'layer_dimension',
-        label: 'Dimension Span',
-        dimensionText: '5.00 m (16\' 4")',
-        width: 500,
+        label: 'Dimension Callout',
+        width: 320,
         height: 35,
-        color: '#60A5FA',
+        color: '#2563EB',
+        dimensionText: '3.20 m (10\' 6")',
       });
-    } else if (cmd === 'RO' || cmd === 'ROTATE') {
+    } else if (cmd === 'ROTATE' || cmd === 'RO') {
       if (selectedEntityId) {
         handleRotateEntity(selectedEntityId);
         setCliMessage('Rotated selected entity 90°');
       } else {
-        setCliMessage('Select an entity first to rotate.');
+        setCliMessage('Select an entity first to rotate');
       }
-    } else if (cmd === 'FIT' || cmd === 'ZOOMFIT') {
-      setZoom(0.85);
-      setCliMessage('Zoom fitted to floor plan extents.');
-    } else if (cmd === 'DXF' || cmd === 'EXPORT') {
-      downloadDxf(drawing);
-      setCliMessage('Exported AutoCAD / IntelliCAD DXF (.dxf).');
     } else if (cmd === 'ORTHO') {
       setOrthoMode((prev) => !prev);
-      setCliMessage(`Ortho mode set to ${!orthoMode ? 'ON' : 'OFF'}`);
+      setCliMessage(`Ortho mode: ${!orthoMode ? 'ON' : 'OFF'}`);
+    } else if (cmd === 'FIT' || cmd === 'ZOOM FIT') {
+      setZoom(0.85);
+      setCliMessage('Zoomed to fit floor plan');
+    } else if (cmd === 'DXF') {
+      downloadDxf(drawing);
+      setCliMessage('Exported AutoCAD AC1015 DXF blueprint!');
+    } else if (cmd === 'HELP' || cmd === '?') {
+      setCliMessage('Commands: WALL, DOOR, WINDOW, COL, ROOM, DIM, ROTATE, ORTHO, FIT, DXF');
     } else {
-      setCliMessage(`Unknown command "${rawCmd}". Available: WALL, DOOR, WIN, COL, ROOM, DIM, RO, FIT, DXF, ORTHO`);
+      setCliMessage(`Unknown command: "${rawCmd}". Type HELP for available commands.`);
     }
   };
 
-  // AI Reverse-engineering success handler
+  // Handle AI Sketch-to-CAD extraction
   const handleScanSuccess = (analyzedDiagram: DiagramData) => {
+    setIsScanModalOpen(false);
+
+    if (!analyzedDiagram.nodes || analyzedDiagram.nodes.length === 0) return;
+
     pushHistory(drawing);
 
-    // Map analyzed nodes into CadEntity format
     const newEntities: CadEntity[] = analyzedDiagram.nodes.map((node) => ({
       id: node.id,
-      type: (node.type.startsWith('arch_') ? node.type : 'arch_wall') as CadEntityType,
+      type: (node.type?.startsWith('arch_') ? node.type : 'arch_wall') as CadEntityType,
       layerId:
         node.type === 'arch_wall'
           ? 'layer_wall'
@@ -338,8 +344,8 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
   const selectedEntity = drawing.entities.find((e) => e.id === selectedEntityId) || null;
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-950 font-sans text-slate-200 antialiased select-none">
-      {/* 1. TOP TOOLBAR */}
+    <div className="flex flex-col h-screen w-screen overflow-hidden bg-slate-100 font-sans text-slate-800 antialiased select-none">
+      {/* 1. TOP APPLICATION TOOLBAR (Flowlify Executive Styling) */}
       <OmegaCADToolbar
         drawing={drawing}
         onUpdateDrawing={setDrawing}
@@ -359,14 +365,21 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
         isLayerPanelOpen={isLayerPanelOpen}
         onBackToDashboard={onBackToDashboard}
         onBackToHome={onBackToHome}
+        canvasTheme={canvasTheme}
+        onToggleCanvasTheme={() =>
+          setCanvasTheme((t) => (t === 'light' ? 'blueprint' : 'light'))
+        }
       />
 
       {/* 2. MAIN CAD WORKSPACE */}
-      <div className="flex flex-1 h-[calc(100vh-3.5rem-2rem)] relative overflow-hidden">
-        {/* Left: Tool Ribbon */}
-        <OmegaCADRibbon onAddCadEntity={handleAddEntity} />
+      <div className="flex flex-1 h-[calc(100vh-3.5rem-2.25rem)] relative overflow-hidden">
+        {/* Left: Tool Ribbon & CAD Blocks Library */}
+        <OmegaCADRibbon
+          onAddCadEntity={handleAddEntity}
+          onOpenScanModal={() => setIsScanModalOpen(true)}
+        />
 
-        {/* Center: Precision CAD Viewport Canvas */}
+        {/* Center: Precision CAD Drafting Canvas */}
         <OmegaCADCanvas
           drawing={drawing}
           selectedEntityId={selectedEntityId}
@@ -379,6 +392,8 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
           zoom={zoom}
           onZoomChange={setZoom}
           orthoMode={orthoMode}
+          canvasTheme={canvasTheme}
+          onZoomFit={() => setZoom(0.85)}
         />
 
         {/* Right: Layer Manager & Entity Inspector Panel */}
@@ -399,10 +414,11 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
         )}
       </div>
 
-      {/* 3. AUTOCAD COMMAND LINE (CLI) */}
+      {/* 3. AUTOCAD COMMAND LINE & STATUS BAR (Flowlify Footer) */}
       <OmegaCADCommandLine
         onExecuteCommand={handleExecuteCommand}
         lastMessage={cliMessage}
+        orthoMode={orthoMode}
       />
 
       {/* 4. AI SKETCH-TO-CAD SCANNER MODAL */}

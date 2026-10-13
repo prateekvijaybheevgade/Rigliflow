@@ -3,7 +3,7 @@ import {
   CadDrawing,
   CadEntity,
 } from '../../types/omegacad';
-import { RotateCw, Copy, Trash2, ArrowRight } from 'lucide-react';
+import { RotateCw, Copy, Trash2, Maximize2, ZoomIn, ZoomOut, Compass } from 'lucide-react';
 
 interface OmegaCADCanvasProps {
   drawing: CadDrawing;
@@ -17,6 +17,8 @@ interface OmegaCADCanvasProps {
   zoom: number;
   onZoomChange: (z: number) => void;
   orthoMode: boolean;
+  canvasTheme?: 'light' | 'blueprint';
+  onZoomFit?: () => void;
 }
 
 export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
@@ -31,6 +33,8 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
   zoom,
   onZoomChange,
   orthoMode,
+  canvasTheme = 'light',
+  onZoomFit,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [pan, setPan] = useState({ x: 80, y: 60 });
@@ -102,7 +106,7 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
       let rawX = (screenX - dragOffset.x) / zoom;
       let rawY = (screenY - dragOffset.y) / zoom;
 
-      // Snap to 10px grid
+      // Snap to 10px grid (100mm)
       let nextX = Math.round(rawX / 10) * 10;
       let nextY = Math.round(rawY / 10) * 10;
 
@@ -138,9 +142,14 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
 
   const handleMouseDown = (e: React.MouseEvent) => {
     // Middle click or canvas click pans canvas
-    if (e.button === 1 || (e.button === 0 && e.target === containerRef.current)) {
+    if (e.button === 1 || e.target === containerRef.current || (e.target as HTMLElement).id === 'cad-canvas-bg') {
       setIsPanning(true);
-      setPanStart({ x: pan.x, y: pan.y, startX: e.clientX, startY: e.clientY });
+      setPanStart({
+        x: pan.x,
+        y: pan.y,
+        startX: e.clientX,
+        startY: e.clientY,
+      });
       onSelectEntity(null);
     }
   };
@@ -152,80 +161,121 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
     setResizeHandle(null);
   };
 
-  // Zoom on wheel
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
-    const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-    const nextZoom = Math.min(3.0, Math.max(0.2, zoom * zoomFactor));
-    onZoomChange(nextZoom);
+    const zoomFactor = e.deltaY < 0 ? 1.08 : 0.92;
+    const newZoom = Math.min(3.0, Math.max(0.25, zoom * zoomFactor));
+
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    setPan((prev) => ({
+      x: mouseX - (mouseX - prev.x) * (newZoom / zoom),
+      y: mouseY - (mouseY - prev.y) * (newZoom / zoom),
+    }));
+
+    onZoomChange(newZoom);
   };
 
-  // Filter entities by visible layer
-  const visibleLayersMap = new Map(drawing.layers.map((l) => [l.id, l.visible]));
-  const visibleEntities = drawing.entities.filter((e) => visibleLayersMap.get(e.layerId) !== false);
+  // Keyboard Shortcuts (Delete, Esc)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedEntityId) {
+        const active = document.activeElement;
+        if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+        onDeleteEntity(selectedEntityId);
+      } else if (e.key === 'Escape') {
+        onSelectEntity(null);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedEntityId, onDeleteEntity, onSelectEntity]);
 
-  const selectedEntity = drawing.entities.find((e) => e.id === selectedEntityId) || null;
+  // Filter visible entities by layer visibility
+  const visibleEntities = drawing.entities.filter((entity) => {
+    const layer = drawing.layers.find((l) => l.id === entity.layerId);
+    return layer ? layer.visible : true;
+  });
+
+  const isDark = canvasTheme === 'blueprint';
+  const bgColor = isDark ? '#0B1E36' : '#F8FAFC';
+  const gridLineMajor = isDark ? '#1E3A5F' : '#E2E8F0';
+  const gridLineMinor = isDark ? '#112744' : '#F1F5F9';
+  const textColor = isDark ? '#F1F5F9' : '#0F172A';
+
+  const selectedEntity = drawing.entities.find((e) => e.id === selectedEntityId);
 
   return (
     <div
       ref={containerRef}
-      onMouseMove={handleMouseMove}
       onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onWheel={handleWheel}
-      className="flex-1 h-full relative overflow-hidden bg-[#0B1E36] select-none cursor-crosshair"
-      style={{ touchAction: 'none' }}
+      className={`relative flex-1 h-full overflow-hidden select-none cursor-crosshair ${
+        isDark ? 'bg-[#0B1E36]' : 'bg-[#F8FAFC]'
+      }`}
+      style={{
+        backgroundImage: isDark
+          ? `radial-gradient(circle, #1E3A5F 1px, transparent 1px)`
+          : `radial-gradient(circle, #CBD5E1 1px, transparent 1px)`,
+        backgroundSize: `${20 * zoom}px ${20 * zoom}px`,
+        backgroundPosition: `${pan.x}px ${pan.y}px`,
+      }}
     >
-      {/* 1. BACKGROUND SVG GRID PATTERN */}
-      <svg className="absolute inset-0 w-full h-full pointer-events-none">
+      {/* 1. SVG PATTERN DEFINITIONS */}
+      <svg className="absolute w-0 h-0 pointer-events-none" aria-hidden="true">
         <defs>
-          {/* Minor 100mm grid */}
-          <pattern id="omegaCadMinor" width={10 * zoom} height={10 * zoom} patternUnits="userSpaceOnUse" x={pan.x} y={pan.y}>
-            <path d={`M ${10 * zoom} 0 L 0 0 0 ${10 * zoom}`} fill="none" stroke="#1E3A8A" strokeWidth="0.5" opacity="0.3" />
+          {/* Concrete Cross-Hatch (Light Theme) */}
+          <pattern id="concreteHatchLight" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="16" stroke="#475569" strokeWidth="1.2" strokeOpacity="0.4" />
+            <line x1="8" y1="0" x2="8" y2="16" stroke="#475569" strokeWidth="0.8" strokeOpacity="0.3" strokeDasharray="3,3" />
           </pattern>
-          {/* Major 500mm grid */}
-          <pattern id="omegaCadMajor" width={50 * zoom} height={50 * zoom} patternUnits="userSpaceOnUse" x={pan.x} y={pan.y}>
-            <rect width={50 * zoom} height={50 * zoom} fill="url(#omegaCadMinor)" />
-            <path d={`M ${50 * zoom} 0 L 0 0 0 ${50 * zoom}`} fill="none" stroke="#0284C7" strokeWidth="0.8" opacity="0.5" />
+
+          {/* Concrete Cross-Hatch (Blueprint Theme) */}
+          <pattern id="concreteHatchBlueprint" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="16" stroke="#38BDF8" strokeWidth="1.2" strokeOpacity="0.5" />
+            <line x1="8" y1="0" x2="8" y2="16" stroke="#38BDF8" strokeWidth="0.8" strokeOpacity="0.3" strokeDasharray="3,3" />
           </pattern>
-          {/* Hatch pattern for walls */}
-          <pattern id="concreteHatch" width="8" height="8" patternTransform="rotate(45 0 0)" patternUnits="userSpaceOnUse">
-            <line x1="0" y1="0" x2="0" y2="8" stroke="#38BDF8" strokeWidth="1" opacity="0.3" />
+
+          {/* Brick Hatch (Light Theme) */}
+          <pattern id="brickHatchLight" width="20" height="10" patternUnits="userSpaceOnUse">
+            <line x1="0" y1="0" x2="20" y2="0" stroke="#64748B" strokeWidth="1" strokeOpacity="0.4" />
+            <line x1="0" y1="5" x2="20" y2="5" stroke="#64748B" strokeWidth="1" strokeOpacity="0.4" />
+            <line x1="0" y1="0" x2="0" y2="5" stroke="#64748B" strokeWidth="1" strokeOpacity="0.4" />
+            <line x1="10" y1="5" x2="10" y2="10" stroke="#64748B" strokeWidth="1" strokeOpacity="0.4" />
           </pattern>
+
+          {/* Arrowhead marker for dimensions */}
+          <marker id="cad-arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1.5 L 10 5 L 0 8.5 z" fill={isDark ? '#38BDF8' : '#2563EB'} />
+          </marker>
         </defs>
-        <rect width="100%" height="100%" fill="url(#omegaCadMajor)" />
       </svg>
 
-      {/* 2. INFINITE CAD CROSSHAIRS & HUD BADGE */}
+      {/* 2. PRECISION CAD CROSSHAIRS */}
       <div className="absolute inset-0 pointer-events-none z-10">
-        {/* Horizontal crosshair */}
         <div
-          className="absolute left-0 right-0 h-px bg-cyan-400/40 pointer-events-none"
+          className={`absolute left-0 right-0 h-px pointer-events-none ${
+            isDark ? 'bg-cyan-400/25' : 'bg-blue-600/20'
+          }`}
           style={{ top: `${cursorPos.screenY}px` }}
         />
-        {/* Vertical crosshair */}
         <div
-          className="absolute top-0 bottom-0 w-px bg-cyan-400/40 pointer-events-none"
+          className={`absolute top-0 bottom-0 w-px pointer-events-none ${
+            isDark ? 'bg-cyan-400/25' : 'bg-blue-600/20'
+          }`}
           style={{ left: `${cursorPos.screenX}px` }}
         />
-
-        {/* Floating Digital Coordinate HUD */}
-        <div
-          className="absolute pointer-events-none px-2 py-0.5 rounded bg-slate-950/85 border border-cyan-500/40 text-[10px] font-mono text-cyan-300 shadow-lg whitespace-nowrap flex items-center gap-2"
-          style={{
-            left: `${Math.min(window.innerWidth - 320, cursorPos.screenX + 16)}px`,
-            top: `${Math.min(window.innerHeight - 80, cursorPos.screenY + 16)}px`,
-          }}
-        >
-          <span>X: {cursorPos.cadX.toLocaleString()} mm</span>
-          <span className="text-slate-600">|</span>
-          <span>Y: {cursorPos.cadY.toLocaleString()} mm</span>
-          <span className="text-[9px] text-cyan-500 font-bold">WCS</span>
-        </div>
       </div>
 
       {/* 3. CAD WORLD VIEWPORT CANVAS */}
       <div
+        id="cad-canvas-bg"
         className="absolute origin-top-left"
         style={{
           transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
@@ -233,12 +283,12 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
           height: '4000px',
         }}
       >
-        {/* Origin (0,0) WCS Marker */}
+        {/* Origin (0,0) WCS Axis Marker */}
         <div className="absolute left-0 top-0 pointer-events-none">
-          <div className="w-12 h-0.5 bg-red-500" />
-          <div className="h-12 w-0.5 bg-green-500" />
-          <span className="absolute left-2 top-2 text-[10px] font-mono font-bold text-red-400">X</span>
-          <span className="absolute left-0 top-12 text-[10px] font-mono font-bold text-green-400">Y</span>
+          <div className="w-12 h-0.5 bg-red-500 shadow-xs" />
+          <div className="h-12 w-0.5 bg-green-500 shadow-xs" />
+          <span className="absolute left-2 top-2 text-[10px] font-mono font-bold text-red-500">X</span>
+          <span className="absolute left-0 top-12 text-[10px] font-mono font-bold text-green-500">Y</span>
         </div>
 
         {/* ENTITIES RENDERER */}
@@ -278,18 +328,41 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
               }}
               className={`transition-shadow group ${
                 isSelected
-                  ? 'ring-2 ring-cyan-400 ring-offset-2 ring-offset-slate-950 z-20 cursor-move'
-                  : 'hover:ring-1 hover:ring-cyan-400/60 cursor-pointer z-10'
+                  ? 'ring-2 ring-blue-500 ring-offset-2 ring-offset-transparent z-20 cursor-move shadow-md'
+                  : 'hover:ring-1 hover:ring-blue-400 cursor-pointer z-10'
               }`}
             >
               {/* === ENTITY TYPE 1: ARCH WALL === */}
               {entity.type === 'arch_wall' && (
-                <div className="w-full h-full relative border-2 border-cyan-400 bg-slate-900 overflow-hidden shadow-sm">
+                <div
+                  className={`w-full h-full relative overflow-hidden shadow-xs border ${
+                    isDark
+                      ? 'border-cyan-400 bg-slate-900'
+                      : 'border-slate-800 bg-slate-700'
+                  }`}
+                >
                   <svg className="absolute inset-0 w-full h-full">
-                    <rect width="100%" height="100%" fill="url(#concreteHatch)" />
+                    <rect
+                      width="100%"
+                      height="100%"
+                      fill={
+                        entity.wallHatch === 'brick'
+                          ? 'url(#brickHatchLight)'
+                          : isDark
+                          ? 'url(#concreteHatchBlueprint)'
+                          : 'url(#concreteHatchLight)'
+                      }
+                    />
                   </svg>
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className="text-[10px] font-mono font-bold text-cyan-200 bg-slate-950/80 px-1.5 py-0.2 rounded border border-cyan-500/30 truncate max-w-[90%]">
+                  {/* Clean Centered Dimension Tag */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none px-1">
+                    <span
+                      className={`text-[9.5px] font-mono font-bold truncate max-w-[90%] px-1.5 py-0.2 rounded shadow-xs ${
+                        isDark
+                          ? 'bg-slate-950/90 text-cyan-200 border border-cyan-500/30'
+                          : 'bg-white/95 text-slate-800 border border-slate-300'
+                      }`}
+                    >
                       {entity.label}
                     </span>
                   </div>
@@ -300,20 +373,39 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
               {entity.type === 'arch_door' && (
                 <div className="w-full h-full relative">
                   <svg className="w-full h-full overflow-visible">
-                    {/* 90 degree door swing arc */}
+                    {/* Wall Jambs */}
+                    <rect x="0" y={entity.height - 8} width="6" height="8" fill={isDark ? '#F59E0B' : '#1E293B'} />
+                    <rect x={entity.width - 6} y={entity.height - 8} width="6" height="8" fill={isDark ? '#F59E0B' : '#1E293B'} />
+                    {/* Sill Guide line */}
+                    <line x1="0" y1={entity.height - 4} x2={entity.width} y2={entity.height - 4} stroke="#94A3B8" strokeWidth="1" strokeDasharray="3,3" />
+                    {/* 90-degree Door Swing Arc */}
                     <path
-                      d={`M 0 0 A ${entity.width} ${entity.width} 0 0 1 ${entity.width} ${entity.width}`}
+                      d={`M ${entity.width - 6} ${entity.height - 6} A ${entity.width - 12} ${entity.height - 12} 0 0 0 6 6`}
                       fill="none"
-                      stroke="#F59E0B"
-                      strokeWidth="2"
-                      strokeDasharray="4 3"
+                      stroke={isDark ? '#F59E0B' : '#2563EB'}
+                      strokeWidth="1.5"
+                      strokeDasharray="4,3"
                     />
-                    {/* Door frame jamb & open panel line */}
-                    <line x1="0" y1="0" x2="0" y2={entity.width} stroke="#F59E0B" strokeWidth="4" />
-                    {/* Hinge point */}
-                    <circle cx="0" cy="0" r="3" fill="#F59E0B" />
+                    {/* Door Leaf (Thick panel line) */}
+                    <line
+                      x1="6"
+                      y1={entity.height - 6}
+                      x2="6"
+                      y2="6"
+                      stroke={isDark ? '#F59E0B' : '#2563EB'}
+                      strokeWidth="3.5"
+                      strokeLinecap="round"
+                    />
+                    {/* Pivot Hinge Dot */}
+                    <circle cx="6" cy={entity.height - 6} r="2.5" fill={isDark ? '#F59E0B' : '#1E293B'} />
                   </svg>
-                  <span className="absolute left-2 top-2 text-[10px] font-mono font-bold text-amber-400 bg-slate-950/80 px-1 rounded">
+                  <span
+                    className={`absolute left-2 top-2 text-[9.5px] font-mono font-bold px-1 rounded shadow-xs ${
+                      isDark
+                        ? 'bg-slate-950/80 text-amber-400'
+                        : 'bg-white/90 text-blue-700 border border-blue-200'
+                    }`}
+                  >
                     {entity.label || 'D1'}
                   </span>
                 </div>
@@ -321,10 +413,28 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
 
               {/* === ENTITY TYPE 3: ARCH WINDOW === */}
               {entity.type === 'arch_window' && (
-                <div className="w-full h-full relative bg-cyan-950/40 border-2 border-cyan-400 flex items-center justify-center">
-                  {/* Center glazing mullion */}
-                  <div className="w-full h-0.5 bg-white shadow-xs" />
-                  <span className="absolute -top-3 text-[9px] font-mono font-bold text-cyan-300 bg-slate-950/90 px-1 rounded border border-cyan-500/40">
+                <div
+                  className={`w-full h-full relative flex items-center justify-center border shadow-xs ${
+                    isDark
+                      ? 'bg-cyan-950/30 border-cyan-400'
+                      : 'bg-sky-50 border-sky-500'
+                  }`}
+                >
+                  {/* Central double glazing lines */}
+                  <div className="w-full flex flex-col items-center justify-center gap-1">
+                    <div className="w-full h-0.5 bg-sky-500 shadow-xs" />
+                    <div className="w-full h-0.5 bg-sky-400 shadow-xs" />
+                  </div>
+                  {/* Jamb Caps */}
+                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-slate-800" />
+                  <div className="absolute right-0 top-0 bottom-0 w-1.5 bg-slate-800" />
+                  <span
+                    className={`absolute -top-3 text-[9px] font-mono font-bold px-1 rounded shadow-xs ${
+                      isDark
+                        ? 'bg-slate-950 text-cyan-300 border border-cyan-500/40'
+                        : 'bg-white text-sky-800 border border-sky-300'
+                    }`}
+                  >
                     {entity.label || 'W1'}
                   </span>
                 </div>
@@ -332,9 +442,30 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
 
               {/* === ENTITY TYPE 4: STRUCTURAL COLUMN === */}
               {entity.type === 'arch_column' && (
-                <div className="w-full h-full bg-slate-950 border-2 border-rose-500 flex items-center justify-center shadow-md">
-                  <div className="w-2 h-2 bg-rose-500 rounded-full" />
-                  <span className="absolute -bottom-3 text-[9px] font-mono font-bold text-rose-300 bg-slate-950 px-1 rounded border border-rose-500/40">
+                <div
+                  className={`w-full h-full relative flex items-center justify-center shadow-md border ${
+                    isDark
+                      ? 'bg-slate-950 border-rose-500'
+                      : 'bg-slate-900 border-slate-950'
+                  }`}
+                >
+                  {/* Diagonal Civil Cross Bracing */}
+                  <svg className="w-full h-full absolute inset-0">
+                    <line x1="2" y1="2" x2={entity.width - 2} y2={entity.height - 2} stroke="#EF4444" strokeWidth="1.5" />
+                    <line x1={entity.width - 2} y1="2" x2="2" y2={entity.height - 2} stroke="#EF4444" strokeWidth="1.5" />
+                  </svg>
+                  {/* 4 Rebar Corner Dots */}
+                  <div className="absolute left-1 top-1 w-1.5 h-1.5 bg-rose-400 rounded-full" />
+                  <div className="absolute right-1 top-1 w-1.5 h-1.5 bg-rose-400 rounded-full" />
+                  <div className="absolute left-1 bottom-1 w-1.5 h-1.5 bg-rose-400 rounded-full" />
+                  <div className="absolute right-1 bottom-1 w-1.5 h-1.5 bg-rose-400 rounded-full" />
+                  <span
+                    className={`absolute -bottom-3 text-[9px] font-mono font-bold px-1 rounded shadow-xs ${
+                      isDark
+                        ? 'bg-slate-950 text-rose-300 border border-rose-500/40'
+                        : 'bg-white text-slate-800 border border-slate-300'
+                    }`}
+                  >
                     {entity.label || 'C1'}
                   </span>
                 </div>
@@ -342,35 +473,70 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
 
               {/* === ENTITY TYPE 5: ROOM ENCLOSURE === */}
               {entity.type === 'arch_room' && (
-                <div className="w-full h-full relative border-2 border-dashed border-cyan-400/80 bg-cyan-950/20 flex flex-col items-center justify-center p-2 text-center">
-                  <span className="text-xs font-mono font-bold text-white drop-shadow-sm truncate max-w-[95%]">
+                <div
+                  className={`w-full h-full relative flex flex-col items-center justify-center p-3 text-center border-2 border-dashed transition-all ${
+                    isDark
+                      ? 'border-cyan-400/70 bg-cyan-950/15'
+                      : 'border-blue-400/80 bg-blue-50/25 hover:bg-blue-50/40'
+                  }`}
+                >
+                  <span
+                    className={`text-xs font-bold truncate max-w-[95%] ${
+                      isDark ? 'text-white drop-shadow-sm' : 'text-slate-900'
+                    }`}
+                  >
                     {entity.label}
                   </span>
                   {entity.roomArea && (
-                    <span className="text-[10px] font-mono font-bold text-cyan-300 bg-slate-950/80 px-1.5 py-0.5 rounded border border-cyan-500/30 mt-1">
+                    <span
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded mt-1 shadow-xs ${
+                        isDark
+                          ? 'bg-slate-950/90 text-cyan-300 border border-cyan-500/30'
+                          : 'bg-blue-50 text-blue-700 border border-blue-200'
+                      }`}
+                    >
                       {entity.roomArea}
                     </span>
                   )}
                   {entity.sublabel && (
-                    <span className="text-[9px] text-slate-400 font-mono mt-0.5 truncate max-w-[95%]">
+                    <span
+                      className={`text-[9.5px] mt-0.5 truncate max-w-[95%] ${
+                        isDark ? 'text-slate-400' : 'text-slate-500'
+                      }`}
+                    >
                       {entity.sublabel}
                     </span>
                   )}
                 </div>
               )}
 
-              {/* === ENTITY TYPE 6: DIMENSION CALLOUT === */}
+              {/* === ENTITY TYPE 6: DIMENSION SPAN === */}
               {entity.type === 'arch_dimension' && (
-                <div className="w-full h-full relative flex items-center justify-center">
+                <div className="w-full h-full relative flex items-center justify-center pointer-events-none">
                   <svg className="w-full h-full overflow-visible">
-                    {/* Dimension line */}
-                    <line x1="0" y1={entity.height / 2} x2={entity.width} y2={entity.height / 2} stroke="#60A5FA" strokeWidth="1.5" />
-                    {/* Left 45 degree architectural tick */}
-                    <line x1="-5" y1={entity.height / 2 - 8} x2="5" y2={entity.height / 2 + 8} stroke="#60A5FA" strokeWidth="2.5" />
-                    {/* Right 45 degree architectural tick */}
-                    <line x1={entity.width - 5} y1={entity.height / 2 - 8} x2={entity.width + 5} y2={entity.height / 2 + 8} stroke="#60A5FA" strokeWidth="2.5" />
+                    {/* Left & Right Witness Lines */}
+                    <line x1="0" y1="0" x2="0" y2={entity.height} stroke={isDark ? '#38BDF8' : '#2563EB'} strokeWidth="1.2" />
+                    <line x1={entity.width} y1="0" x2={entity.width} y2={entity.height} stroke={isDark ? '#38BDF8' : '#2563EB'} strokeWidth="1.2" />
+                    {/* Horizontal Main Dimension Line */}
+                    <line
+                      x1="0"
+                      y1={entity.height / 2}
+                      x2={entity.width}
+                      y2={entity.height / 2}
+                      stroke={isDark ? '#38BDF8' : '#2563EB'}
+                      strokeWidth="1.5"
+                    />
+                    {/* Architectural 45-degree slash ticks */}
+                    <line x1="-4" y1={entity.height / 2 + 4} x2="4" y2={entity.height / 2 - 4} stroke={isDark ? '#38BDF8' : '#2563EB'} strokeWidth="2" />
+                    <line x1={entity.width - 4} y1={entity.height / 2 + 4} x2={entity.width + 4} y2={entity.height / 2 - 4} stroke={isDark ? '#38BDF8' : '#2563EB'} strokeWidth="2" />
                   </svg>
-                  <span className="absolute -top-3 text-[10px] font-mono font-bold text-blue-200 bg-slate-950 px-2 py-0.2 rounded border border-blue-500/40">
+                  <span
+                    className={`absolute text-[9.5px] font-mono font-bold px-2 py-0.5 rounded shadow-xs ${
+                      isDark
+                        ? 'bg-slate-950 text-cyan-300 border border-cyan-500/40'
+                        : 'bg-white text-blue-700 border border-blue-300'
+                    }`}
+                  >
                     {entity.dimensionText || entity.label}
                   </span>
                 </div>
@@ -378,90 +544,188 @@ export const OmegaCADCanvas: React.FC<OmegaCADCanvasProps> = ({
 
               {/* === ENTITY TYPE 7: FURNITURE BLOCK === */}
               {entity.type === 'arch_furniture' && (
-                <div className="w-full h-full border border-slate-500/80 bg-slate-900/60 rounded flex flex-col items-center justify-center p-1 text-center">
-                  <div className="w-8 h-4 border border-slate-400 rounded-sm mb-1 bg-slate-800" />
-                  <span className="text-[10px] font-mono text-slate-300 truncate max-w-[95%]">
+                <div
+                  className={`w-full h-full relative border-2 rounded p-1 flex flex-col items-center justify-between shadow-xs ${
+                    isDark
+                      ? 'border-slate-500 bg-slate-900/60 text-slate-300'
+                      : 'border-slate-400 bg-white text-slate-700'
+                  }`}
+                >
+                  {/* Pillow Blocks */}
+                  <div className="w-full flex gap-1 justify-center pt-1">
+                    <div className="w-2/5 h-4 border border-slate-400 rounded-sm bg-slate-100" />
+                    <div className="w-2/5 h-4 border border-slate-400 rounded-sm bg-slate-100" />
+                  </div>
+                  <span className="text-[9px] font-semibold text-center font-mono truncate max-w-[95%]">
                     {entity.label}
                   </span>
+                  <div className="w-full border-t border-slate-300 pb-1" />
                 </div>
               )}
 
               {/* === ENTITY TYPE 8: TITLE BLOCK === */}
               {entity.type === 'arch_titleblock' && (
-                <div className="w-full h-full border-2 border-white bg-slate-950 p-2 flex flex-col justify-between font-mono text-left">
-                  <div className="flex justify-between items-start border-b border-slate-700 pb-1">
-                    <div>
-                      <div className="text-xs font-bold text-white uppercase">{entity.label}</div>
-                      <div className="text-[9px] text-cyan-400 font-bold">{entity.sublabel || 'SHEET A-101 • SCALE 1:50'}</div>
-                    </div>
-                    <span className="text-[10px] font-bold text-cyan-300">NORTH ↑</span>
+                <div
+                  className={`w-full h-full border-2 p-2 flex flex-col justify-between shadow-md ${
+                    isDark
+                      ? 'border-cyan-400 bg-slate-950 text-slate-200'
+                      : 'border-slate-800 bg-white text-slate-900'
+                  }`}
+                >
+                  <div className="flex items-center justify-between border-b pb-1 border-slate-300">
+                    <span className="text-xs font-bold tracking-wider">{entity.label}</span>
+                    <span className="text-[10px] font-mono font-semibold px-1 rounded bg-blue-50 text-blue-700">NORTH ↑</span>
                   </div>
-                  <div className="text-[8px] text-slate-500 flex justify-between">
-                    <span>OMEGACAD PLUS 15.0</span>
-                    <span>APPROVED FOR CONSTRUCTION</span>
+                  <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono">
+                    <span>{entity.sublabel || 'SHEET A-101 • SCALE 1:50'}</span>
+                    <span className="font-bold text-slate-700">APPROVED FOR CONSTRUCTION</span>
                   </div>
                 </div>
               )}
 
-              {/* RESIZE HANDLE AT BOTTOM RIGHT (when selected) */}
+              {/* Resize Handles (When entity is selected) */}
               {isSelected && (
-                <div
-                  onMouseDown={(e) => {
-                    e.stopPropagation();
-                    setResizingEntityId(entity.id);
-                    setResizeHandle('se');
-                    setResizeStart({
-                      w: entity.width,
-                      h: entity.height,
-                      x: entity.x,
-                      y: entity.y,
-                      startX: e.clientX,
-                      startY: e.clientY,
-                    } as any);
-                  }}
-                  className="absolute -right-1.5 -bottom-1.5 w-3 h-3 bg-cyan-400 border border-slate-950 cursor-se-resize z-30"
-                />
+                <>
+                  <div
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      setResizingEntityId(entity.id);
+                      setResizeHandle('se');
+                      setResizeStart({
+                        w: entity.width,
+                        h: entity.height,
+                        x: entity.x,
+                        y: entity.y,
+                        startX: e.clientX,
+                        startY: e.clientY,
+                      });
+                    }}
+                    className="absolute -right-1.5 -bottom-1.5 w-3.5 h-3.5 bg-blue-600 border-2 border-white rounded-full cursor-se-resize shadow-md"
+                    title="Drag to resize span"
+                  />
+                  <div
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      setResizingEntityId(entity.id);
+                      setResizeHandle('e');
+                      setResizeStart({
+                        w: entity.width,
+                        h: entity.height,
+                        x: entity.x,
+                        y: entity.y,
+                        startX: e.clientX,
+                        startY: e.clientY,
+                      });
+                    }}
+                    className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-blue-600 border border-white rounded-xs cursor-e-resize shadow-xs"
+                    title="Drag width"
+                  />
+                  <div
+                    onMouseDown={(e) => {
+                      e.stopPropagation();
+                      setResizingEntityId(entity.id);
+                      setResizeHandle('s');
+                      setResizeStart({
+                        w: entity.width,
+                        h: entity.height,
+                        x: entity.x,
+                        y: entity.y,
+                        startX: e.clientX,
+                        startY: e.clientY,
+                      });
+                    }}
+                    className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-blue-600 border border-white rounded-xs cursor-s-resize shadow-xs"
+                    title="Drag height"
+                  />
+                </>
               )}
             </div>
           );
         })}
       </div>
 
-      {/* 4. FLOATING QUICK-ACTION TOOLBAR FOR SELECTED ENTITY */}
+      {/* 4. SELECTED ENTITY FLOATING QUICK ACTION DOCK */}
       {selectedEntity && (
         <div
-          className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 bg-slate-950/95 border border-cyan-500/40 px-3 py-1.5 rounded-full shadow-2xl backdrop-blur-md text-xs font-mono select-none"
+          className="absolute z-30 flex items-center gap-1 bg-white/95 backdrop-blur-md px-2 py-1 rounded-xl border border-slate-200/90 shadow-lg text-xs select-none"
+          style={{
+            left: `${Math.max(16, selectedEntity.x * zoom + pan.x)}px`,
+            top: `${Math.max(16, selectedEntity.y * zoom + pan.y - 42)}px`,
+          }}
         >
-          <span className="text-cyan-300 font-bold px-1 truncate max-w-[140px]">
-            {selectedEntity.label}
+          <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-mono">
+            {selectedEntity.type.replace('arch_', '').toUpperCase()}
           </span>
-          <div className="w-px h-3.5 bg-slate-800" />
+          <div className="h-3 w-px bg-slate-200 mx-0.5" />
           <button
             onClick={() => onRotateEntity(selectedEntity.id)}
-            className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
-            title="Rotate 90 degrees"
+            className="p-1 hover:bg-slate-100 rounded text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+            title="Rotate 90° (R)"
           >
-            <RotateCw size={13} className="text-cyan-400" />
-            <span>Rotate 90°</span>
+            <RotateCw size={13} />
           </button>
           <button
             onClick={() => onDuplicateEntity(selectedEntity.id)}
-            className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
-            title="Duplicate"
+            className="p-1 hover:bg-slate-100 rounded text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+            title="Duplicate (D)"
           >
             <Copy size={13} />
-            <span>Duplicate</span>
           </button>
           <button
             onClick={() => onDeleteEntity(selectedEntity.id)}
-            className="flex items-center gap-1 px-2 py-1 rounded-md hover:bg-rose-950 text-rose-400 hover:text-rose-300 transition-colors cursor-pointer"
-            title="Delete Entity"
+            className="p-1 hover:bg-rose-50 rounded text-slate-400 hover:text-rose-600 transition-colors cursor-pointer"
+            title="Delete (Del)"
           >
             <Trash2 size={13} />
-            <span>Delete</span>
           </button>
         </div>
       )}
+
+      {/* 5. FLOATING CANVAS NAVIGATION DOCK (Bottom-Left matching Flowlify Canvas) */}
+      <div className="absolute bottom-3 left-3 z-30 flex items-center gap-1 bg-white/95 backdrop-blur-md px-2 py-1.5 rounded-xl border border-slate-200/90 shadow-md text-xs select-none">
+        <button
+          onClick={() => onZoomChange(Math.max(0.25, zoom - 0.15))}
+          className="p-1.5 hover:bg-slate-100 rounded text-slate-600 active:bg-slate-200 transition-colors cursor-pointer"
+          title="Zoom Out"
+        >
+          <ZoomOut size={14} />
+        </button>
+        <button
+          onClick={() => {
+            onZoomChange(1);
+            setPan({ x: 80, y: 60 });
+          }}
+          className="px-2 py-1 font-bold text-[11px] text-slate-700 hover:bg-slate-100 rounded active:bg-slate-200 transition-colors cursor-pointer"
+          title="Reset to 100%"
+        >
+          {Math.round(zoom * 100)}%
+        </button>
+        <button
+          onClick={() => onZoomChange(Math.min(3.0, zoom + 0.15))}
+          className="p-1.5 hover:bg-slate-100 rounded text-slate-600 active:bg-slate-200 transition-colors cursor-pointer"
+          title="Zoom In"
+        >
+          <ZoomIn size={14} />
+        </button>
+        {onZoomFit && (
+          <button
+            onClick={onZoomFit}
+            className="p-1.5 hover:bg-slate-100 rounded text-slate-600 active:bg-slate-200 transition-colors cursor-pointer ml-0.5 border-l border-slate-200/80"
+            title="Fit to Screen"
+          >
+            <Maximize2 size={13} />
+          </button>
+        )}
+      </div>
+
+      {/* 6. FLOATING LIVE COORDINATES HUD (Bottom-Center Pill) */}
+      <div className="absolute bottom-3 right-3 z-30 hidden sm:flex items-center gap-2 bg-white/95 backdrop-blur-md px-3 py-1 rounded-xl border border-slate-200/90 shadow-md text-xs font-mono text-slate-600 select-none">
+        <Compass size={13} className="text-blue-600" />
+        <span>X: {cursorPos.cadX.toLocaleString()} mm</span>
+        <span className="text-slate-300">|</span>
+        <span>Y: {cursorPos.cadY.toLocaleString()} mm</span>
+        <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-1 rounded">WCS</span>
+      </div>
     </div>
   );
 };

@@ -16,11 +16,12 @@ import {
   Home,
   Sliders,
   Grid,
-  Lock,
-  Eye,
   Check,
-  Building2,
   Upload,
+  Pencil,
+  Sun,
+  Moon,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { CadDrawing, CadScale, CadUnit } from '../../types/omegacad';
 import { downloadDxf } from '../../utils/dxfExport';
@@ -44,6 +45,8 @@ interface OmegaCADToolbarProps {
   isLayerPanelOpen: boolean;
   onBackToDashboard: () => void;
   onBackToHome: () => void;
+  canvasTheme?: 'light' | 'blueprint';
+  onToggleCanvasTheme?: () => void;
 }
 
 export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
@@ -65,6 +68,8 @@ export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
   isLayerPanelOpen,
   onBackToDashboard,
   onBackToHome,
+  canvasTheme = 'light',
+  onToggleCanvasTheme,
 }) => {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -84,44 +89,62 @@ export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
     downloadDxf(drawing);
   };
 
+  const handleExportSvg = () => {
+    setIsExportOpen(false);
+    // Trigger SVG export via DOM element if available
+    const svgElem = document.getElementById('cad-vector-blueprint');
+    if (!svgElem) {
+      alert('Generating CAD SVG export...');
+      return;
+    }
+    const svgData = new XMLSerializer().serializeToString(svgElem);
+    const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${drawing.title.replace(/\s+/g, '_')}.svg`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <header className="h-14 bg-slate-950 border-b border-slate-800 text-slate-200 px-4 flex items-center justify-between gap-3 select-none z-30 shrink-0">
-      {/* 1. BRAND & NAVIGATION */}
-      <div className="flex items-center gap-3">
+    <header className="h-14 border-b border-slate-200/90 bg-white/95 backdrop-blur-md px-3 sm:px-4 flex items-center justify-between select-none z-30 shadow-[0_1px_2px_rgba(0,0,0,0.03)] gap-3">
+      {/* 1. BRAND & NAVIGATION (Flowlify executive styling) */}
+      <div className="flex items-center gap-2.5 shrink-0 min-w-0">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-cyan-950 border border-cyan-500/40 flex items-center justify-center text-cyan-400 shadow-sm shadow-cyan-950">
-            <Compass size={18} />
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-xs">
+            <Compass size={17} />
           </div>
           <div className="flex flex-col">
             <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-sm tracking-tight text-white">
-                OmegaCAD <span className="text-cyan-400">Plus</span>
+              <span className="font-bold text-sm tracking-tight text-slate-900">
+                OmegaCAD <span className="text-blue-600 font-extrabold">Plus</span>
               </span>
-              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-cyan-900/60 text-cyan-300 border border-cyan-500/30">
+              <span className="px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-blue-50 text-blue-700 border border-blue-200/80">
                 PRO 15.0
               </span>
             </div>
-            <span className="text-[10px] text-slate-400 -mt-0.5 font-mono">
+            <span className="text-[10px] text-slate-500 -mt-0.5 font-medium hidden sm:inline">
               2D Civil & Architectural Drafting Engine
             </span>
           </div>
         </div>
 
-        <div className="h-5 w-px bg-slate-800 mx-1 hidden sm:block" />
+        <div className="h-5 w-px bg-slate-200 mx-1 hidden sm:block" />
 
         {/* Home & Dashboard Quick Switch */}
         <div className="hidden sm:flex items-center gap-1">
           <button
             onClick={onBackToHome}
-            className="p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
             title="Return to Flowlify Home"
           >
             <Home size={15} />
           </button>
           <button
             onClick={onBackToDashboard}
-            className="p-1.5 rounded-md hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer flex items-center gap-1 text-xs"
-            title="Workspace Dashboard"
+            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-medium"
+            title="Return to Workspace Dashboard"
           >
             <LayoutDashboard size={15} />
             <span className="text-[11px] hidden md:inline">Dashboard</span>
@@ -129,7 +152,7 @@ export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
         </div>
       </div>
 
-      {/* 2. DRAWING TITLE & SCALE CONTROLS */}
+      {/* 2. DRAWING TITLE, SCALE & UNITS */}
       <div className="flex items-center gap-2 min-w-0 max-w-xs md:max-w-md">
         {isEditingTitle ? (
           <input
@@ -139,7 +162,7 @@ export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
             onBlur={handleTitleSubmit}
             onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
             autoFocus
-            className="bg-slate-900 border border-cyan-500/50 rounded px-2 py-0.5 text-xs text-white focus:outline-none w-48 font-medium"
+            className="bg-white border border-blue-500 rounded-md px-2.5 py-1 text-xs text-slate-900 focus:outline-none w-56 font-semibold shadow-xs"
           />
         ) : (
           <button
@@ -147,16 +170,17 @@ export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
               setTitleInput(drawing.title);
               setIsEditingTitle(true);
             }}
-            className="text-xs font-semibold text-slate-200 hover:text-cyan-400 px-2 py-1 rounded hover:bg-slate-900 truncate transition-colors text-left cursor-pointer"
+            className="group flex items-center gap-1.5 text-xs font-semibold text-slate-800 hover:text-blue-600 px-2 py-1 rounded-md hover:bg-slate-100 truncate transition-colors text-left cursor-pointer"
             title="Click to rename blueprint"
           >
-            {drawing.title}
+            <span className="truncate max-w-[160px] md:max-w-[220px]">{drawing.title}</span>
+            <Pencil size={11} className="text-slate-400 group-hover:text-blue-600 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
           </button>
         )}
 
-        {/* Scale Picker */}
-        <div className="hidden lg:flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-md border border-slate-800 text-[11px]">
-          <span className="text-slate-400 font-mono text-[10px]">SCALE:</span>
+        {/* Scale Selector */}
+        <div className="hidden lg:flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md border border-slate-200 text-[11px]">
+          <span className="text-slate-400 font-semibold text-[10px]">SCALE:</span>
           <select
             value={drawing.scale}
             onChange={(e) =>
@@ -165,18 +189,18 @@ export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
                 scale: e.target.value as CadScale,
               }))
             }
-            className="bg-transparent text-cyan-300 font-semibold focus:outline-none cursor-pointer"
+            className="bg-transparent text-slate-800 font-semibold focus:outline-none cursor-pointer text-xs"
           >
-            <option value="1:20" className="bg-slate-900 text-white">1:20 (Detail)</option>
-            <option value="1:50" className="bg-slate-900 text-white">1:50 (Standard)</option>
-            <option value="1:100" className="bg-slate-900 text-white">1:100 (Site)</option>
-            <option value="1:200" className="bg-slate-900 text-white">1:200 (Master)</option>
+            <option value="1:20">1:20 (Detail)</option>
+            <option value="1:50">1:50 (Standard)</option>
+            <option value="1:100">1:100 (Site)</option>
+            <option value="1:200">1:200 (Master)</option>
           </select>
         </div>
 
-        {/* Units Picker */}
-        <div className="hidden xl:flex items-center gap-1 bg-slate-900 px-2 py-1 rounded-md border border-slate-800 text-[11px]">
-          <span className="text-slate-400 font-mono text-[10px]">UNITS:</span>
+        {/* Units Selector */}
+        <div className="hidden xl:flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md border border-slate-200 text-[11px]">
+          <span className="text-slate-400 font-semibold text-[10px]">UNITS:</span>
           <select
             value={drawing.unit}
             onChange={(e) =>
@@ -185,161 +209,206 @@ export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
                 unit: e.target.value as CadUnit,
               }))
             }
-            className="bg-transparent text-slate-200 font-semibold focus:outline-none cursor-pointer"
+            className="bg-transparent text-slate-800 font-semibold focus:outline-none cursor-pointer text-xs"
           >
-            <option value="mm" className="bg-slate-900 text-white">Millimeters (mm)</option>
-            <option value="m" className="bg-slate-900 text-white">Meters (m)</option>
-            <option value="in" className="bg-slate-900 text-white">Inches (in)</option>
-            <option value="ft" className="bg-slate-900 text-white">Feet (ft)</option>
+            <option value="mm">Millimeters (mm)</option>
+            <option value="m">Meters (m)</option>
+            <option value="in">Inches (in)</option>
+            <option value="ft">Feet (ft)</option>
           </select>
         </div>
       </div>
 
-      {/* 3. DRAFTING MODES, ZOOM, & EXPORT */}
-      <div className="flex items-center gap-1.5">
+      {/* 3. DRAFTING MODES, ZOOM, AI & EXPORT (Flowlify executive buttons) */}
+      <div className="flex items-center gap-1.5 shrink-0">
         {/* Ortho Lock Toggle (<kbd>F8</kbd>) */}
         <button
           onClick={onToggleOrtho}
-          className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold transition-all border cursor-pointer ${
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold transition-all border cursor-pointer ${
             orthoMode
-              ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/50 shadow-xs shadow-cyan-950'
-              : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-slate-200'
+              ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-xs'
+              : 'bg-white text-slate-500 border-slate-200 hover:text-slate-800 hover:bg-slate-50'
           }`}
-          title="Toggle Orthogonal 90° Snap (F8 / Shift)"
+          title="Toggle Orthogonal 90° Axis Lock (F8)"
         >
-          ORTHO {orthoMode ? 'ON' : 'OFF'}
+          <span
+            className={`w-1.5 h-1.5 rounded-full ${
+              orthoMode ? 'bg-blue-600 animate-pulse' : 'bg-slate-300'
+            }`}
+          />
+          <span>ORTHO {orthoMode ? 'ON' : 'OFF'}</span>
         </button>
 
+        {/* Canvas Theme Toggle (Light Drafting vs Blueprint Blue) */}
+        {onToggleCanvasTheme && (
+          <button
+            onClick={onToggleCanvasTheme}
+            className={`p-1.5 rounded-md border text-xs transition-colors cursor-pointer flex items-center gap-1 ${
+              canvasTheme === 'blueprint'
+                ? 'bg-slate-900 text-white border-slate-800'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-900'
+            }`}
+            title={canvasTheme === 'blueprint' ? 'Switch to Light Drafting View' : 'Switch to Blueprint Blue View'}
+          >
+            {canvasTheme === 'blueprint' ? (
+              <Moon size={14} className="text-cyan-400" />
+            ) : (
+              <Sun size={14} className="text-amber-500" />
+            )}
+            <span className="hidden 2xl:inline text-[11px] font-medium">
+              {canvasTheme === 'blueprint' ? 'Blueprint' : 'Light Grid'}
+            </span>
+          </button>
+        )}
+
         {/* Undo / Redo */}
-        <div className="flex items-center bg-slate-900 rounded-md border border-slate-800 p-0.5">
+        <div className="flex items-center bg-slate-100 rounded-md p-0.5 border border-slate-200/80">
           <button
             onClick={onUndo}
             disabled={!canUndo}
-            className="p-1.5 rounded hover:bg-slate-800 disabled:opacity-30 text-slate-300 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded hover:bg-white disabled:opacity-30 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
             title="Undo (Ctrl+Z)"
           >
-            <Undo2 size={14} />
+            <Undo2 size={13} />
           </button>
           <button
             onClick={onRedo}
             disabled={!canRedo}
-            className="p-1.5 rounded hover:bg-slate-800 disabled:opacity-30 text-slate-300 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded hover:bg-white disabled:opacity-30 text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
             title="Redo (Ctrl+Y)"
           >
-            <Redo2 size={14} />
+            <Redo2 size={13} />
           </button>
         </div>
 
         {/* Zoom Controls */}
-        <div className="hidden md:flex items-center bg-slate-900 rounded-md border border-slate-800 p-0.5">
+        <div className="hidden md:flex items-center bg-slate-100 rounded-md p-0.5 border border-slate-200/80">
           <button
             onClick={onZoomOut}
-            className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded hover:bg-white text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
             title="Zoom Out"
           >
-            <ZoomOut size={14} />
+            <ZoomOut size={13} />
           </button>
           <button
             onClick={onZoomReset}
-            className="px-2 py-1 text-[11px] font-mono text-slate-300 hover:text-white cursor-pointer"
+            className="px-2 py-0.5 text-[11px] font-bold text-slate-700 hover:bg-white rounded transition-colors cursor-pointer"
             title="Reset Zoom (100%)"
           >
             {Math.round(zoom * 100)}%
           </button>
           <button
             onClick={onZoomIn}
-            className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded hover:bg-white text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
             title="Zoom In"
           >
-            <ZoomIn size={14} />
+            <ZoomIn size={13} />
           </button>
           <button
             onClick={onZoomFit}
-            className="p-1.5 rounded hover:bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
-            title="Zoom to Fit Floor Plan"
+            className="p-1.5 rounded hover:bg-white text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
+            title="Fit to Screen"
           >
-            <Maximize2 size={14} />
+            <Maximize2 size={13} />
           </button>
         </div>
 
-        {/* AI Sketch-to-CAD Scanner Button */}
+        {/* AI Sketch-to-CAD Scanner Button (Matching Flowlify Studio Dark Pill) */}
         <button
           onClick={onOpenScanModal}
-          className="flex items-center gap-1.5 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-sm shadow-cyan-950 transition-all cursor-pointer"
+          className="flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-xs transition-all cursor-pointer group"
           title="Reverse engineer hand-drawn sketch to CAD with Gemini Vision"
         >
-          <Sparkles size={14} className="text-cyan-200" />
-          <span className="hidden sm:inline">AI Sketch-to-CAD</span>
+          <Sparkles size={13} className="text-amber-400 group-hover:rotate-12 transition-transform" />
+          <span className="hidden sm:inline">AI Sketch to CAD</span>
           <span className="sm:hidden">AI</span>
         </button>
 
         {/* Layer Panel Inspector Toggle */}
         <button
           onClick={onToggleLayerPanel}
-          className={`p-1.5 rounded-lg border text-xs transition-colors cursor-pointer flex items-center gap-1.5 ${
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors cursor-pointer ${
             isLayerPanelOpen
-              ? 'bg-slate-800 text-cyan-300 border-cyan-500/40'
-              : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-800'
+              ? 'bg-blue-50 text-blue-700 border-blue-300 shadow-xs'
+              : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
           }`}
           title="Toggle CAD Layer Stack & Properties Inspector"
         >
-          <Layers size={15} />
-          <span className="hidden xl:inline text-[11px]">Layers</span>
+          <Layers size={14} className={isLayerPanelOpen ? 'text-blue-600' : 'text-slate-500'} />
+          <span className="hidden xl:inline">Layers</span>
         </button>
 
         {/* EXPORT DROPDOWN */}
         <div className="relative">
           <button
             onClick={() => setIsExportOpen(!isExportOpen)}
-            className="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-100 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-700 transition-all cursor-pointer"
+            className="flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold px-3 py-1.5 rounded-lg border border-slate-200 shadow-xs transition-all cursor-pointer"
           >
-            <Download size={14} className="text-cyan-400" />
+            <Download size={13} className="text-slate-600" />
             <span className="hidden sm:inline">Export</span>
-            <ChevronDown size={13} className="text-slate-400" />
+            <ChevronDown size={12} className="text-slate-400" />
           </button>
 
           {isExportOpen && (
-            <div className="absolute right-0 top-full mt-2 w-64 bg-slate-900 border border-slate-800 rounded-xl shadow-2xl p-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
-              <div className="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                Professional CAD Formats
+            <div
+              className="absolute right-0 top-full mt-2 w-64 bg-white border border-slate-200 rounded-xl shadow-xl p-1.5 z-50 text-xs animate-in fade-in zoom-in-95 duration-100"
+              onClick={() => setIsExportOpen(false)}
+            >
+              <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Industry CAD Formats
               </div>
               <button
                 onClick={handleExportDxf}
-                className="w-full flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-800 text-left transition-colors group cursor-pointer"
+                className="w-full flex items-start gap-2.5 p-2 rounded-lg hover:bg-blue-50 text-left transition-colors group cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-md bg-cyan-950 border border-cyan-500/30 flex items-center justify-center text-cyan-400 shrink-0 group-hover:scale-105 transition-transform">
+                <div className="w-8 h-8 rounded-md bg-blue-100 text-blue-700 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                   <FileCode size={16} />
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-white group-hover:text-cyan-300 flex items-center gap-1.5">
-                    <span>AutoCAD / IntelliCAD (.DXF)</span>
-                    <span className="text-[9px] bg-cyan-500/20 text-cyan-300 px-1 rounded">CAD</span>
+                  <div className="text-xs font-semibold text-slate-900 group-hover:text-blue-700 flex items-center gap-1.5">
+                    <span>AutoCAD DXF (.DXF)</span>
+                    <span className="text-[9px] bg-blue-100 text-blue-700 font-bold px-1 rounded">2D CAD</span>
                   </div>
-                  <div className="text-[10px] text-slate-400">
-                    AC1015 metric vector drawing with layers
+                  <div className="text-[10px] text-slate-500">
+                    AC1015 metric drawing with layers
                   </div>
                 </div>
               </button>
 
-              <div className="border-t border-slate-800 my-1" />
+              <button
+                onClick={handleExportSvg}
+                className="w-full flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-50 text-left transition-colors cursor-pointer"
+              >
+                <div className="w-8 h-8 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                  <FileCode size={16} />
+                </div>
+                <div>
+                  <div className="text-xs font-semibold text-slate-900">Scalable Vector (.SVG)</div>
+                  <div className="text-[10px] text-slate-500">
+                    Crisp architectural vector graphic
+                  </div>
+                </div>
+              </button>
 
-              <div className="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                Plotting & Documents
+              <div className="border-t border-slate-100 my-1" />
+
+              <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Plotting & Print
               </div>
               <button
                 onClick={() => {
                   setIsExportOpen(false);
                   window.print();
                 }}
-                className="w-full flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-800 text-left transition-colors cursor-pointer"
+                className="w-full flex items-start gap-2.5 p-2 rounded-lg hover:bg-slate-50 text-left transition-colors cursor-pointer"
               >
-                <div className="w-8 h-8 rounded-md bg-slate-800 flex items-center justify-center text-slate-300 shrink-0">
+                <div className="w-8 h-8 rounded-md bg-slate-100 text-slate-700 flex items-center justify-center shrink-0">
                   <FileText size={16} />
                 </div>
                 <div>
-                  <div className="text-xs font-semibold text-white">Engineering PDF Plot</div>
-                  <div className="text-[10px] text-slate-400">
-                    Scaled 1:50 vector print with title block
+                  <div className="text-xs font-semibold text-slate-900">Architectural PDF Plot</div>
+                  <div className="text-[10px] text-slate-500">
+                    Scaled 1:50 printout with title block
                   </div>
                 </div>
               </button>

@@ -1,24 +1,26 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Terminal, Send, HelpCircle } from 'lucide-react';
+import { Terminal, Send, Check } from 'lucide-react';
 
 interface OmegaCADCommandLineProps {
   onExecuteCommand: (cmd: string) => void;
   lastMessage?: string;
+  orthoMode?: boolean;
 }
 
 export const OmegaCADCommandLine: React.FC<OmegaCADCommandLineProps> = ({
   onExecuteCommand,
   lastMessage,
+  orthoMode = true,
 }) => {
   const [input, setInput] = useState('');
-  const [history, setHistory] = useState<string[]>([
-    'OmegaCAD Plus 15.0 Active. Type a command or press shortcut key.',
-  ]);
+  const [feedback, setFeedback] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (lastMessage) {
-      setHistory((prev) => [...prev.slice(-4), lastMessage]);
+      setFeedback(lastMessage);
+      const timer = setTimeout(() => setFeedback(null), 3500);
+      return () => clearTimeout(timer);
     }
   }, [lastMessage]);
 
@@ -27,7 +29,6 @@ export const OmegaCADCommandLine: React.FC<OmegaCADCommandLineProps> = ({
     const trimmed = input.trim();
     if (!trimmed) return;
 
-    setHistory((prev) => [...prev.slice(-4), `Command: ${trimmed}`]);
     onExecuteCommand(trimmed);
     setInput('');
   };
@@ -40,48 +41,68 @@ export const OmegaCADCommandLine: React.FC<OmegaCADCommandLineProps> = ({
     { label: 'ROOM', cmd: 'ROOM', desc: 'Add Room' },
     { label: 'DIM', cmd: 'DIM', desc: 'Add Dimension' },
     { label: 'RO', cmd: 'ROTATE', desc: 'Rotate 90°' },
-    { label: 'FIT', cmd: 'FIT', desc: 'Zoom Fit' },
     { label: 'DXF', cmd: 'DXF', desc: 'Export DXF' },
   ];
 
   return (
-    <div className="bg-slate-950/95 border-t border-slate-800 text-slate-200 px-3 py-1.5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2 z-20 shrink-0 font-mono text-xs select-none">
-      {/* Command prompt & input */}
-      <form onSubmit={handleSubmit} className="flex items-center gap-2 flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 text-cyan-400 font-bold shrink-0">
-          <Terminal size={14} />
-          <span className="text-[11px]">Command:</span>
+    <footer className="h-9 bg-white/95 backdrop-blur-md border-t border-slate-200/90 px-3 flex items-center justify-between z-30 select-none shadow-[0_-1px_2px_rgba(0,0,0,0.02)] text-xs text-slate-600 gap-3">
+      {/* 1. Command Input Field */}
+      <form onSubmit={handleSubmit} className="flex items-center gap-2 flex-1 min-w-0 max-w-xl">
+        <div className="flex items-center gap-1.5 text-blue-600 font-bold shrink-0">
+          <Terminal size={13} />
+          <span className="text-[11px] font-mono">CAD:</span>
         </div>
         <input
           ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Type command (WALL, DOOR, WIN, DIM, RO, DXF, HELP)..."
-          className="flex-1 bg-slate-900 border border-slate-800 hover:border-slate-700 focus:border-cyan-500 rounded px-2.5 py-1 text-xs text-white focus:outline-none font-mono"
+          placeholder="Type command (WALL, DOOR, WIN, COL, ROOM, DIM, RO, DXF, HELP)..."
+          className="flex-1 bg-transparent text-xs text-slate-800 placeholder-slate-400 focus:outline-none font-mono min-w-0"
         />
         <button
           type="submit"
-          className="p-1 rounded bg-slate-800 hover:bg-slate-700 text-cyan-400 hover:text-cyan-300 transition-colors cursor-pointer shrink-0"
+          className="p-1 rounded text-slate-400 hover:text-blue-600 transition-colors cursor-pointer shrink-0"
+          title="Execute Command (Enter)"
         >
-          <Send size={13} />
+          <Send size={12} />
         </button>
       </form>
 
-      {/* Quick Command Chips */}
-      <div className="flex items-center gap-1 overflow-x-auto no-scrollbar py-0.5">
-        {quickCommands.map((q) => (
-          <button
-            key={q.label}
-            type="button"
-            onClick={() => onExecuteCommand(q.cmd)}
-            className="px-2 py-0.5 rounded bg-slate-900 hover:bg-cyan-950 border border-slate-800 hover:border-cyan-500/50 text-[10px] text-slate-300 hover:text-cyan-300 transition-colors cursor-pointer shrink-0 font-mono"
-            title={q.desc}
-          >
-            {q.label}
-          </button>
-        ))}
+      {/* 2. Feedback Notification or Quick Command Chips */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        {feedback ? (
+          <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded text-[10.5px] font-medium animate-in fade-in duration-150">
+            <Check size={11} className="text-blue-600" />
+            <span>{feedback}</span>
+          </div>
+        ) : (
+          <div className="hidden lg:flex items-center gap-1 overflow-x-auto scrollbar-none py-0.5">
+            {quickCommands.map((q) => (
+              <button
+                key={q.label}
+                type="button"
+                onClick={() => onExecuteCommand(q.cmd)}
+                className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-blue-50 hover:text-blue-700 border border-slate-200/80 text-[10px] font-mono text-slate-600 transition-colors cursor-pointer shrink-0 font-medium"
+                title={q.desc}
+              >
+                {q.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-    </div>
+
+      {/* 3. Live Drafting Status */}
+      <div className="hidden md:flex items-center gap-2 text-[11px] text-slate-400 font-mono shrink-0">
+        <span className={orthoMode ? 'text-blue-600 font-bold' : 'text-slate-400'}>
+          ORTHO: {orthoMode ? 'ON' : 'OFF'}
+        </span>
+        <span aria-hidden="true">·</span>
+        <span>SNAP: 10mm</span>
+        <span aria-hidden="true">·</span>
+        <span className="text-slate-600 font-medium">AutoCAD 2026 Compatible</span>
+      </div>
+    </footer>
   );
 };
