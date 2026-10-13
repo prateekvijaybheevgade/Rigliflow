@@ -462,6 +462,92 @@ Return the updated valid flowchart JSON maintaining the same structure with titl
   }
 });
 
+// Vercel Blob Storage endpoints (works in dev and production)
+app.post('/api/upload-blob', async (req, res) => {
+  try {
+    const { fileBase64, filename, mimeType = 'image/png' } = req.body || {};
+    if (!fileBase64 || !filename) {
+      return res.status(400).json({ error: 'Missing fileBase64 or filename' });
+    }
+
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    if (!blobToken) {
+      const dataUri = fileBase64.startsWith('data:') ? fileBase64 : `data:${mimeType};base64,${fileBase64}`;
+      return res.json({
+        success: true,
+        url: dataUri,
+        downloadUrl: dataUri,
+        pathname: filename,
+        contentType: mimeType,
+        isFallback: true,
+        message: 'BLOB_READ_WRITE_TOKEN not set. Saved as data URI fallback.',
+      });
+    }
+
+    const { put } = await import('@vercel/blob');
+    const cleanBase64 = fileBase64.replace(/^data:[a-zA-Z0-9/+-]+;base64,/, '');
+    const fileBuffer = Buffer.from(cleanBase64, 'base64');
+    const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const pathname = `flowlify/${Date.now()}-${safeFilename}`;
+
+    const blob = await put(pathname, fileBuffer, {
+      access: 'public',
+      contentType: mimeType,
+      token: blobToken,
+    });
+
+    return res.json({
+      success: true,
+      url: blob.url,
+      downloadUrl: blob.downloadUrl,
+      pathname: blob.pathname,
+      contentType: blob.contentType,
+      isFallback: false,
+    });
+  } catch (error: any) {
+    console.error('Error uploading blob:', error);
+    return res.status(500).json({ error: error.message || 'Failed to upload blob' });
+  }
+});
+
+app.get('/api/list-blobs', async (req, res) => {
+  try {
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    if (!blobToken) {
+      return res.json({ success: true, blobs: [], isFallback: true });
+    }
+    const { list } = await import('@vercel/blob');
+    const { prefix } = req.query;
+    const result = await list({
+      prefix: typeof prefix === 'string' ? prefix : 'flowlify/',
+      token: blobToken,
+    });
+    return res.json({ success: true, blobs: result.blobs, hasMore: result.hasMore });
+  } catch (error: any) {
+    console.error('Error listing blobs:', error);
+    return res.status(500).json({ error: error.message || 'Failed to list blobs' });
+  }
+});
+
+app.post('/api/delete-blob', async (req, res) => {
+  try {
+    const { url } = req.body || {};
+    if (!url) {
+      return res.status(400).json({ error: 'Missing url to delete' });
+    }
+    const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+    if (!blobToken) {
+      return res.json({ success: true, isFallback: true });
+    }
+    const { del } = await import('@vercel/blob');
+    await del(url, { token: blobToken });
+    return res.json({ success: true, message: 'Blob deleted' });
+  } catch (error: any) {
+    console.error('Error deleting blob:', error);
+    return res.status(500).json({ error: error.message || 'Failed to delete blob' });
+  }
+});
+
 // Vite middleware in dev or static files in production
 if (!isProd) {
   const { createServer: createViteServer } = await import('vite');

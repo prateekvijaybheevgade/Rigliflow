@@ -316,17 +316,20 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           image: selectedImage,
+          imageBase64: selectedImage,
           mimeType,
           userInstructions: instructions,
+          additionalInstructions: instructions,
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to analyze diagram');
       }
 
-      const analyzedDiagram: DiagramData = await response.json();
+      const resData = await response.json();
+      const analyzedDiagram: DiagramData = resData.diagram || resData;
       onSuccess(analyzedDiagram, selectedImage);
       onClose();
     } catch (err: any) {
