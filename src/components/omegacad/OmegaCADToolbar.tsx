@@ -24,6 +24,7 @@ import {
   Image as ImageIcon,
   Box,
   Mountain,
+  Columns,
 } from 'lucide-react';
 import { CadDrawing, CadScale, CadUnit } from '../../types/omegacad';
 import { downloadDxf } from '../../utils/dxfExport';
@@ -49,8 +50,8 @@ interface OmegaCADToolbarProps {
   onBackToHome: () => void;
   canvasTheme?: 'light' | 'blueprint';
   onToggleCanvasTheme?: () => void;
-  viewMode?: '2d' | '3d';
-  onToggleViewMode?: (mode: '2d' | '3d') => void;
+  viewMode?: '2d' | 'split' | '3d';
+  onToggleViewMode?: (mode: '2d' | 'split' | '3d') => void;
 }
 
 export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
@@ -316,12 +317,12 @@ export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
           </button>
         </div>
 
-        {/* 2D / 3D Holographic View Mode Segmented Switcher */}
+        {/* 2D / Split / 3D Holographic View Mode Segmented Switcher */}
         {onToggleViewMode && (
           <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
             <button
               onClick={() => onToggleViewMode('2d')}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
                 viewMode === '2d'
                   ? 'bg-white text-blue-600 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
@@ -331,16 +332,30 @@ export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
               <span>2D Plan</span>
             </button>
             <button
+              onClick={() => onToggleViewMode('split')}
+              className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === 'split'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs'
+                  : 'text-slate-700 hover:text-blue-600'
+              }`}
+              title="Live Side-by-Side: 2D Blueprint Drafting (Left) + Realtime 3D Hologram (Right)"
+            >
+              <Columns size={12} className={viewMode === 'split' ? 'text-white' : 'text-blue-600'} />
+              <span className="hidden sm:inline">Split 2D+3D</span>
+              <span className="sm:hidden">Split</span>
+            </button>
+            <button
               onClick={() => onToggleViewMode('3d')}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
                 viewMode === '3d'
                   ? 'bg-gradient-to-r from-emerald-600 to-cyan-600 text-white shadow-xs'
                   : 'text-slate-700 hover:text-emerald-600'
               }`}
-              title="3D Holographic Digital Twin & Topological Elevation View"
+              title="Full 3D Holographic Digital Twin & Topological Elevation View"
             >
               <Mountain size={12} className={viewMode === '3d' ? 'text-white' : 'text-emerald-600'} />
-              <span>3D Hologram</span>
+              <span className="hidden sm:inline">3D Hologram</span>
+              <span className="sm:hidden">3D</span>
             </button>
           </div>
         )}

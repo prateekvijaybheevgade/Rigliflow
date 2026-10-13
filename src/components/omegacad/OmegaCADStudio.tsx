@@ -81,7 +81,7 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
   const [isLayerPanelOpen, setIsLayerPanelOpen] = useState<boolean>(true);
   const [isScanModalOpen, setIsScanModalOpen] = useState<boolean>(false);
   const [cliMessage, setCliMessage] = useState<string | undefined>();
-  const [viewMode, setViewMode] = useState<'2d' | '3d'>('2d');
+  const [viewMode, setViewMode] = useState<'2d' | 'split' | '3d'>('2d');
 
   const pushHistory = useCallback(
     (current: CadDrawing) => {
@@ -497,6 +497,9 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
     } else if (cmd === '3D' || cmd === 'RENDER' || cmd === 'VIEW3D') {
       setViewMode('3d');
       setCliMessage('Switched to 3D Holographic Digital Twin View');
+    } else if (cmd === 'SPLIT' || cmd === 'DUAL') {
+      setViewMode('split');
+      setCliMessage('Activated Split 2D Drafting + 3D Holographic Twin Mode');
     } else if (cmd === '2D' || cmd === 'PLAN') {
       setViewMode('2d');
       setCliMessage('Switched to 2D Precision Drafting Plan');
@@ -591,13 +594,53 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
         onToggleViewMode={setViewMode}
       />
 
-      {/* 2. MAIN CAD WORKSPACE (2D Drafting Plan or 3D Holographic Twin) */}
+      {/* 2. MAIN CAD WORKSPACE (2D Drafting Plan, Split 2D+3D, or Full 3D Twin) */}
       {viewMode === '3d' ? (
         <div className="flex-1 w-full h-[calc(100vh-3.5rem)] relative overflow-hidden">
           <OmegaCAD3DViewer
             drawing={drawing}
             onBackTo2D={() => setViewMode('2d')}
           />
+        </div>
+      ) : viewMode === 'split' ? (
+        <div className="flex flex-1 h-[calc(100vh-3.5rem)] relative overflow-hidden">
+          {/* Left Split: 2D Ribbon + Precision CAD Drafting Canvas */}
+          <div className="w-1/2 h-full flex relative border-r border-slate-300 overflow-hidden">
+            <OmegaCADRibbon
+              onAddCadEntity={handleAddEntity}
+              onOpenScanModal={() => setIsScanModalOpen(true)}
+            />
+            <OmegaCADCanvas
+              drawing={drawing}
+              selectedEntityId={selectedEntityId}
+              onSelectEntity={setSelectedEntityId}
+              onUpdateEntityPosition={handleUpdateEntityPosition}
+              onUpdateEntityDimensions={handleUpdateEntityDimensions}
+              onRotateEntity={handleRotateEntity}
+              onDuplicateEntity={handleDuplicateEntity}
+              onDeleteEntity={handleDeleteEntity}
+              zoom={zoom * 0.85}
+              onZoomChange={setZoom}
+              orthoMode={orthoMode}
+              canvasTheme={canvasTheme}
+              onZoomFit={() => setZoom(0.85)}
+              onOffsetEntity={handleOffsetEntity}
+              onMirrorEntity={handleMirrorEntity}
+              onArrayEntity={handleArrayEntity}
+              onAutoDimension={handleAutoDimension}
+              onIsolateLayer={handleIsolateLayer}
+              onRestoreAllLayers={handleRestoreAllLayers}
+            />
+          </div>
+
+          {/* Right Split: Live Synchronized 3D Holographic Twin */}
+          <div className="w-1/2 h-full relative overflow-hidden">
+            <OmegaCAD3DViewer
+              drawing={drawing}
+              onBackTo2D={() => setViewMode('2d')}
+              isSplitView={true}
+            />
+          </div>
         </div>
       ) : (
         <>
