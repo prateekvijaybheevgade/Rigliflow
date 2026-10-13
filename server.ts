@@ -18,6 +18,13 @@ const isProd = process.env.NODE_ENV === 'production';
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
+export const CANDIDATE_GEMINI_MODELS = [
+  'gemini-3.8-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.5-flash',
+  'gemini-3.7-flash',
+];
+
 // Helper to initialize Gemini client with required headers
 function getGeminiClient() {
   const apiKey = process.env.GEMINI_API_KEY;
@@ -32,6 +39,23 @@ function getGeminiClient() {
       },
     },
   });
+}
+
+async function generateWithModelFallback(ai: GoogleGenAI, payload: any) {
+  let lastError: any;
+  for (const model of CANDIDATE_GEMINI_MODELS) {
+    try {
+      const res = await ai.models.generateContent({
+        ...payload,
+        model,
+      });
+      return res;
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`[Gemini] Model ${model} unavailable (${err.message || err.status}), falling back to next candidate...`);
+    }
+  }
+  throw lastError;
 }
 
 // Clean JSON response from model
@@ -125,8 +149,7 @@ Output valid JSON matching this schema:
     const promptText = `Analyze this diagram/image in detail. Detect every block, text label, diamond decision, database, connection, arrow, and label. Reverse engineer it into a clean, beautiful, high-precision editable flowchart JSON structure.
 ${additionalInstructions ? `User extra guidance: ${additionalInstructions}` : ''}`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const response = await generateWithModelFallback(ai, {
       contents: [
         {
           parts: [
@@ -335,8 +358,7 @@ Extract all spatial elements and reverse-engineer them into clean, precise, orth
       const promptText = `Analyze this architectural floor plan sketch or technical drawing in detail. Detect all rooms, walls, doors, windows, dimensions, structural columns, and furniture. Reverse engineer it into a precise, editable 2D CAD architectural blueprint layout.
 ${additionalInstructions ? `User extra guidance: ${additionalInstructions}` : ''}`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+      const response = await generateWithModelFallback(ai, {
         contents: [
           {
             parts: [
@@ -397,8 +419,7 @@ Format: JSON with title, description, direction ('top-down' or 'left-right'), no
 Canvas coordinates should be spaced nicely (X 100-1400, Y 80-1000). Nodes should have width 180-220, height 70-95.
 Make sure to include decision branches (Yes/No, Success/Failure) where appropriate.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const response = await generateWithModelFallback(ai, {
       contents: prompt,
       config: {
         systemInstruction,
@@ -432,8 +453,7 @@ app.post('/api/refine-flowchart', async (req, res) => {
 
     const ai = getGeminiClient();
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const response = await generateWithModelFallback(ai, {
       contents: `Here is the current flowchart JSON:
 ${JSON.stringify(currentDiagram, null, 2)}
 

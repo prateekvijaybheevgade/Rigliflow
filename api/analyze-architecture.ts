@@ -1,4 +1,4 @@
-import { getGeminiClient, cleanJsonResponse } from './_gemini';
+import { getGeminiClient, cleanJsonResponse, generateWithModelFallback } from './_gemini';
 
 function generateSynthesizedArchitecturePlan(extraPrompt?: string) {
   const promptLower = (extraPrompt || '').toLowerCase();
@@ -175,8 +175,7 @@ Extract all spatial elements and reverse-engineer them into clean, precise, orth
       const promptText = `Analyze this architectural floor plan sketch or technical drawing in detail. Detect all rooms, walls, doors, windows, dimensions, structural columns, and furniture. Reverse engineer it into a precise, editable 2D CAD architectural blueprint layout.
 ${additionalInstructions ? `User extra guidance: ${additionalInstructions}` : ''}`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-3.8-flash',
+      const response = await generateWithModelFallback(ai, {
         contents: [
           {
             parts: [

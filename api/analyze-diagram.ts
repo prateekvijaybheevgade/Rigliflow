@@ -1,4 +1,4 @@
-import { getGeminiClient, cleanJsonResponse } from './_gemini';
+import { getGeminiClient, cleanJsonResponse, generateWithModelFallback } from './_gemini';
 
 export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') {
@@ -84,8 +84,7 @@ Output valid JSON matching this schema:
     const promptText = `Analyze this diagram/image in detail. Detect every block, text label, diamond decision, database, connection, arrow, and label. Reverse engineer it into a clean, beautiful, high-precision editable flowchart JSON structure.
 ${additionalInstructions ? `User extra guidance: ${additionalInstructions}` : ''}`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const response = await generateWithModelFallback(ai, {
       contents: [
         {
           parts: [

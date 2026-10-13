@@ -1,4 +1,4 @@
-import { getGeminiClient, cleanJsonResponse } from './_gemini';
+import { getGeminiClient, cleanJsonResponse, generateWithModelFallback } from './_gemini';
 
 export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') {
@@ -23,8 +23,7 @@ Format: JSON with title, description, direction ('top-down' or 'left-right'), no
 Canvas coordinates should be spaced nicely (X 100-1400, Y 80-1000). Nodes should have width 180-220, height 70-95.
 Make sure to include decision branches (Yes/No, Success/Failure) where appropriate.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const response = await generateWithModelFallback(ai, {
       contents: prompt,
       config: {
         systemInstruction,

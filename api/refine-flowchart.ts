@@ -1,4 +1,4 @@
-import { getGeminiClient, cleanJsonResponse } from './_gemini';
+import { getGeminiClient, cleanJsonResponse, generateWithModelFallback } from './_gemini';
 
 export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') {
@@ -16,8 +16,7 @@ export default async function handler(req: any, res: any) {
 
     const ai = getGeminiClient();
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
+    const response = await generateWithModelFallback(ai, {
       contents: `Here is the current flowchart JSON:
 ${JSON.stringify(currentDiagram, null, 2)}
 
