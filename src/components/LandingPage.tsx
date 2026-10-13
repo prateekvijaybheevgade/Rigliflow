@@ -50,6 +50,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
   };
 
+  const handleGoToOmegaCad = () => {
+    if (user) {
+      onGoToOmegaCad?.();
+    } else {
+      onOpenAuthModal();
+    }
+  };
+
+  const handleGoToEditor = () => {
+    if (user) {
+      onGoToEditor?.();
+    } else {
+      onOpenAuthModal();
+    }
+  };
+
   const scrollToSection = (id: string) => {
     setMobileMenuOpen(false);
     const element = document.querySelector(id);
@@ -107,7 +123,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             Pricing
           </button>
           <button
-            onClick={onGoToOmegaCad}
+            onClick={handleGoToOmegaCad}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-cyan-800 bg-cyan-50 hover:bg-cyan-100 border border-cyan-300 transition-all whitespace-nowrap cursor-pointer shadow-xs group"
           >
             <Compass size={14} className="text-cyan-600 group-hover:rotate-45 transition-transform" />
@@ -592,7 +608,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
               <button
-                onClick={onGoToOmegaCad}
+                onClick={handleGoToOmegaCad}
                 className="flex items-center justify-center gap-2 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-slate-950 font-bold text-sm px-6 py-3.5 rounded-xl shadow-lg shadow-cyan-950 hover:shadow-cyan-900 transition-all cursor-pointer"
               >
                 <Compass size={18} />

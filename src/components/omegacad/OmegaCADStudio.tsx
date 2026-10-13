@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   CadDrawing,
   CadEntity,
@@ -14,6 +14,7 @@ import { UploadModal } from '../UploadModal';
 import { DiagramData } from '../../types/flowchart';
 import { downloadDxf } from '../../utils/dxfExport';
 import { OmegaCAD3DViewer } from './OmegaCAD3DViewer';
+import { useAuth } from '../../context/AuthContext';
 
 interface OmegaCADStudioProps {
   onBackToHome: () => void;
@@ -24,6 +25,15 @@ export const OmegaCADStudio: React.FC<OmegaCADStudioProps> = ({
   onBackToHome,
   onBackToDashboard,
 }) => {
+  const { user } = useAuth();
+
+  // Enforce authentication: If user logs out while in OmegaCAD, immediately return to home
+  useEffect(() => {
+    if (!user) {
+      onBackToHome();
+    }
+  }, [user, onBackToHome]);
+
   // Initial 2BHK Architectural Floor Plan CAD Blueprint
   const [drawing, setDrawing] = useState<CadDrawing>({
     title: '2BHK Residential Floor Plan & CAD Blueprint',

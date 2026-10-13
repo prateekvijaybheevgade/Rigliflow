@@ -26,6 +26,7 @@ import {
   Mountain,
   Columns,
 } from 'lucide-react';
+import { UserButton } from '@clerk/react';
 import { CadDrawing, CadScale, CadUnit } from '../../types/omegacad';
 import { downloadDxf } from '../../utils/dxfExport';
 
@@ -461,6 +462,17 @@ export const OmegaCADToolbar: React.FC<OmegaCADToolbarProps> = ({
               </button>
             </div>
           )}
+        </div>
+
+        {/* User Profile & Sign Out Menu */}
+        <div className="flex items-center pl-1 border-l border-slate-200">
+          <UserButton
+            appearance={{
+              elements: {
+                avatarBox: 'w-7 h-7 rounded-full border border-slate-200 shadow-2xs',
+              },
+            }}
+          />
         </div>
       </div>
     </header>

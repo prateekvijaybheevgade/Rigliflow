@@ -58,9 +58,10 @@ type AppView = 'landing' | 'dashboard' | 'editor' | 'omegacad';
 function FlowlifyApp() {
   const { user } = useAuth();
 
-  // Navigation View: 'landing', 'dashboard', or 'editor'
   const [currentView, setCurrentView] = useState<AppView>('landing');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [pendingTool, setPendingTool] = useState<AppView | null>(null);
+  const [authModalConfig, setAuthModalConfig] = useState<{ title?: string; subtitle?: string }>({});
 
   // Responsive Mobile / Tablet Layout States
   const [isMobileOrTablet, setIsMobileOrTablet] = useState<boolean>(
@@ -82,14 +83,34 @@ function FlowlifyApp() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // When user authenticates, transition from landing to dashboard
+  // Centralized Mandatory Tool Access Gate
+  const handleAccessTool = (targetView: AppView, toolName: string) => {
+    if (user) {
+      setCurrentView(targetView);
+    } else {
+      setPendingTool(targetView);
+      setAuthModalConfig({
+        title: `Sign In to Access ${toolName}`,
+        subtitle: `Please sign in or create an account to start using ${toolName}. All tools require authentication.`,
+      });
+      setIsAuthModalOpen(true);
+    }
+  };
+
+  // When user authenticates, transition from landing to requested tool or dashboard
   useEffect(() => {
-    if (user && currentView === 'landing') {
-      setCurrentView('dashboard');
+    if (user) {
+      if (pendingTool) {
+        setCurrentView(pendingTool);
+        setPendingTool(null);
+      } else if (currentView === 'landing') {
+        setCurrentView('dashboard');
+      }
     } else if (!user && currentView !== 'landing') {
       setCurrentView('landing');
+      setIsAuthModalOpen(true);
     }
-  }, [user]);
+  }, [user, currentView, pendingTool]);
 
   // Main diagram state in Studio
   const [diagram, setDiagram] = useState<DiagramData>(() => SAMPLE_DIAGRAMS[0].diagram);
@@ -1057,25 +1078,27 @@ function FlowlifyApp() {
     ? diagram.edges.find((e) => e.id === selectedEdgeId) || null
     : null;
 
-  // VIEW 1: PUBLIC MARKETING & PRODUCT WEBSITE (Gated)
-  if (currentView === 'landing') {
+  // MANDATORY SECURITY GATE: If not signed in, strictly restrict access to the public Landing Page
+  if (!user || currentView === 'landing') {
     return (
       <>
         <LandingPage
-          onLaunchPlatform={() => {
-            if (user) {
-              setCurrentView('dashboard');
-            } else {
-              setIsAuthModalOpen(true);
-            }
+          onLaunchPlatform={() => handleAccessTool('dashboard', 'Workspace Dashboard')}
+          onOpenAuthModal={() => {
+            setAuthModalConfig({
+              title: 'Access Flowlify Platform',
+              subtitle: 'Sign in or create an account with Clerk to unlock all visual tools, OmegaCAD Plus, and cloud persistence.',
+            });
+            setIsAuthModalOpen(true);
           }}
-          onOpenAuthModal={() => setIsAuthModalOpen(true)}
-          onGoToEditor={() => setCurrentView('editor')}
-          onGoToOmegaCad={() => setCurrentView('omegacad')}
+          onGoToEditor={() => handleAccessTool('editor', 'Flowchart Studio Canvas')}
+          onGoToOmegaCad={() => handleAccessTool('omegacad', 'OmegaCAD Plus Studio')}
         />
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
+          title={authModalConfig.title}
+          subtitle={authModalConfig.subtitle}
         />
       </>
     );
