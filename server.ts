@@ -490,23 +490,76 @@ app.post('/api/upload-blob', async (req, res) => {
     const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
     const pathname = `flowlify/${Date.now()}-${safeFilename}`;
 
-    const blob = await put(pathname, fileBuffer, {
-      access: 'public',
-      contentType: mimeType,
-      token: blobToken,
-    });
+    let blob: any;
+    try {
+      blob = await put(pathname, fileBuffer, {
+        access: 'public',
+        contentType: mimeType,
+        token: blobToken,
+      });
+    } catch (putErr: any) {
+      if (
+        putErr.message &&
+        (putErr.message.includes('private') || putErr.message.includes('Cannot use public access'))
+      ) {
+        blob = await put(pathname, fileBuffer, {
+          access: 'private',
+          contentType: mimeType,
+          token: blobToken,
+        });
+      } else {
+        throw putErr;
+      }
+    }
+
+    const isPrivate = blob.url?.includes('.private.blob.');
+    const displayUrl = isPrivate
+      ? `/api/view-blob?url=${encodeURIComponent(blob.url)}`
+      : blob.url;
 
     return res.json({
       success: true,
-      url: blob.url,
+      url: displayUrl,
+      rawUrl: blob.url,
       downloadUrl: blob.downloadUrl,
       pathname: blob.pathname,
       contentType: blob.contentType,
+      isPrivate,
       isFallback: false,
     });
   } catch (error: any) {
     console.error('Error uploading blob:', error);
     return res.status(500).json({ error: error.message || 'Failed to upload blob' });
+  }
+});
+
+app.get('/api/view-blob', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url || typeof url !== 'string') {
+      return res.status(400).send('Missing url parameter');
+    }
+
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, { headers });
+    if (!response.ok) {
+      return res.status(response.status).send('Failed to fetch blob asset');
+    }
+
+    const contentType = response.headers.get('content-type') || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+
+    const arrayBuffer = await response.arrayBuffer();
+    return res.send(Buffer.from(arrayBuffer));
+  } catch (err: any) {
+    console.error('Error serving blob:', err);
+    return res.status(500).send(err.message || 'Error serving blob');
   }
 });
 

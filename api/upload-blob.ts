@@ -42,18 +42,42 @@ export default async function handler(req: any, res: any) {
     const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
     const pathname = `flowlify/${Date.now()}-${safeFilename}`;
 
-    const blob = await put(pathname, fileBuffer, {
-      access: 'public',
-      contentType: mimeType,
-      token: blobToken,
-    });
+    let blob: any;
+    try {
+      blob = await put(pathname, fileBuffer, {
+        access: 'public',
+        contentType: mimeType,
+        token: blobToken,
+      });
+    } catch (putErr: any) {
+      // If store is configured as private, retry with access: 'private'
+      if (
+        putErr.message &&
+        (putErr.message.includes('private') || putErr.message.includes('Cannot use public access'))
+      ) {
+        blob = await put(pathname, fileBuffer, {
+          access: 'private',
+          contentType: mimeType,
+          token: blobToken,
+        });
+      } else {
+        throw putErr;
+      }
+    }
+
+    const isPrivate = blob.url?.includes('.private.blob.');
+    const displayUrl = isPrivate
+      ? `/api/view-blob?url=${encodeURIComponent(blob.url)}`
+      : blob.url;
 
     return res.status(200).json({
       success: true,
-      url: blob.url,
+      url: displayUrl,
+      rawUrl: blob.url,
       downloadUrl: blob.downloadUrl,
       pathname: blob.pathname,
       contentType: blob.contentType,
+      isPrivate,
       isFallback: false,
     });
   } catch (error: any) {
