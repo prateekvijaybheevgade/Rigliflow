@@ -71,6 +71,76 @@ function createWhiteboardSketchDataUrl(title: string, nodeLabels: string[]): str
   return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 }
 
+/**
+ * Creates an SVG data URL representing an authentic 2D CAD architectural blueprint sketch
+ */
+export function createArchitecturalSketchDataUrl(
+  title: string,
+  rooms: { name: string; x: number; y: number; w: number; h: number }[]
+): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="500" viewBox="0 0 800 500">
+    <rect width="800" height="500" fill="#0B1E36" />
+    <defs>
+      <pattern id="cadGridMinor_${title.replace(/\s+/g, '')}" width="10" height="10" patternUnits="userSpaceOnUse">
+        <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#1E3A8A" stroke-width="0.5" opacity="0.3"/>
+      </pattern>
+      <pattern id="cadGridMajor_${title.replace(/\s+/g, '')}" width="50" height="50" patternUnits="userSpaceOnUse">
+        <rect width="50" height="50" fill="url(#cadGridMinor_${title.replace(/\s+/g, '')})" />
+        <path d="M 50 0 L 0 0 0 50" fill="none" stroke="#0284C7" stroke-width="0.8" opacity="0.5"/>
+      </pattern>
+    </defs>
+    <!-- Background Blueprint Grid -->
+    <rect width="800" height="500" fill="url(#cadGridMajor_${title.replace(/\s+/g, '')})" />
+
+    <!-- Title Block / Stamp -->
+    <rect x="30" y="24" width="740" height="48" rx="4" fill="#0F172A" stroke="#38BDF8" stroke-width="1.2" opacity="0.9" />
+    <text x="50" y="46" font-family="'Courier New', monospace" font-size="14" font-weight="bold" fill="#38BDF8" letter-spacing="1.5">FLOWLIFY CAD • ${title.toUpperCase()}</text>
+    <text x="50" y="62" font-family="'Courier New', monospace" font-size="10" fill="#94A3B8">CIVIL ENGINEERING 2D DRAFTING • SCALE 1:50 • ORTHOGONAL SNAP</text>
+
+    <!-- Perimeter Exterior Walls (Thick double line) -->
+    <g stroke="#38BDF8" fill="none" stroke-width="3">
+      <rect x="70" y="96" width="660" height="340" />
+      <rect x="78" y="104" width="644" height="324" stroke-width="1" stroke-dasharray="3 3" opacity="0.6"/>
+    </g>
+
+    <!-- Rooms -->
+    ${rooms
+      .map(
+        (r) => `
+      <g>
+        <rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="#0284C7" fill-opacity="0.14" stroke="#67E8F9" stroke-width="2" />
+        <text x="${r.x + r.w / 2}" y="${r.y + r.h / 2 - 4}" font-family="'Courier New', monospace" font-size="12" font-weight="bold" fill="#F8FAFC" text-anchor="middle">${r.name}</text>
+        <text x="${r.x + r.w / 2}" y="${r.y + r.h / 2 + 12}" font-family="'Courier New', monospace" font-size="9" fill="#38BDF8" text-anchor="middle">ROOM ZONE</text>
+      </g>
+    `
+      )
+      .join('')}
+
+    <!-- Door Swing Arc -->
+    <path d="M 220 96 A 48 48 0 0 1 268 144" fill="none" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="3 2" />
+    <line x1="220" y1="96" x2="220" y2="144" stroke="#F59E0B" stroke-width="2.5" />
+
+    <!-- Glazed Windows on Exterior -->
+    <rect x="360" y="92" width="90" height="8" fill="#38BDF8" stroke="#FFFFFF" stroke-width="1.5" />
+    <rect x="560" y="92" width="80" height="8" fill="#38BDF8" stroke="#FFFFFF" stroke-width="1.5" />
+
+    <!-- Top Dimension Line with Arrows -->
+    <line x1="70" y1="84" x2="730" y2="84" stroke="#60A5FA" stroke-width="1.2" />
+    <line x1="70" y1="78" x2="70" y2="90" stroke="#60A5FA" stroke-width="1.2" />
+    <line x1="730" y1="78" x2="730" y2="90" stroke="#60A5FA" stroke-width="1.2" />
+    <text x="400" y="81" font-family="'Courier New', monospace" font-size="10" font-weight="bold" fill="#93C5FD" text-anchor="middle">TOTAL SPAN: 12.50 METERS (41' 0")</text>
+
+    <!-- Structural Column Markers at corners -->
+    <rect x="62" y="88" width="16" height="16" fill="#F8FAFC" stroke="#0F172A" stroke-width="1.5" />
+    <rect x="722" y="88" width="16" height="16" fill="#F8FAFC" stroke="#0F172A" stroke-width="1.5" />
+    <rect x="62" y="428" width="16" height="16" fill="#F8FAFC" stroke="#0F172A" stroke-width="1.5" />
+    <rect x="722" y="428" width="16" height="16" fill="#F8FAFC" stroke="#0F172A" stroke-width="1.5" />
+  </svg>`;
+
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+
 export interface SampleTemplate {
   id: string;
   title: string;
@@ -1286,7 +1356,12 @@ export const SAMPLE_DIAGRAMS: SampleTemplate[] = [
     category: 'Architecture',
     description: 'Professional 2D civil CAD drawing featuring walls, swing doors, glazed windows, structural columns, room zones, and dynamic dimension lines.',
     tags: ['Architecture', 'CAD', 'Civil', 'Floor Plan', 'Blueprint', 'AutoCAD'],
-    thumbnailSvgUrl: createWhiteboardSketchDataUrl('2BHK Civil Layout', ['Living Room', 'Master Bed', 'Kitchen', 'Bath']),
+    thumbnailSvgUrl: createArchitecturalSketchDataUrl('2BHK Civil Layout', [
+      { name: 'Living Hall', x: 90, y: 120, w: 260, h: 180 },
+      { name: 'Master Bed', x: 370, y: 120, w: 240, h: 180 },
+      { name: 'Kitchen', x: 90, y: 310, w: 180, h: 105 },
+      { name: 'Ensuite Bath', x: 370, y: 310, w: 150, h: 105 },
+    ]),
     diagram: {
       title: 'Residential Floor Plan & CAD Blueprint',
       description: '2D Architectural civil layout with 1:50 scale drafting standards',
@@ -1576,4 +1651,92 @@ export const SAMPLE_DIAGRAMS: SampleTemplate[] = [
       edges: [],
     },
   },
+  // 8. Commercial Corporate Office Layout CAD
+  {
+    id: 'commercial-office-floorplan',
+    title: 'Commercial Office & Conference Suite CAD',
+    category: 'Architecture',
+    description: 'Corporate workplace layout with executive boardroom, open workstation bay, client reception, and precision cooling IT room.',
+    tags: ['Architecture', 'CAD', 'Office', 'Commercial', 'Blueprint'],
+    thumbnailSvgUrl: createArchitecturalSketchDataUrl('Commercial Office CAD', [
+      { name: 'Executive Conf', x: 90, y: 120, w: 230, h: 180 },
+      { name: 'Workstation Bay', x: 340, y: 120, w: 270, h: 180 },
+      { name: 'Reception & Foyer', x: 90, y: 310, w: 230, h: 105 },
+      { name: 'Server / IT', x: 340, y: 310, w: 160, h: 105 },
+    ]),
+    diagram: {
+      title: 'Commercial Corporate Office CAD Blueprint',
+      description: 'Professional commercial workspace layout with conference facilities',
+      direction: 'top-down',
+      studioMode: 'architecture',
+      gridType: 'blueprint',
+      canvasBg: '#0B1E36',
+      nodes: [
+        { id: 'w_north', type: 'arch_wall', label: 'North Boundary Wall (12.0m)', x: 180, y: 100, width: 780, height: 18, color: '#334155', wallHatch: 'concrete' },
+        { id: 'w_south', type: 'arch_wall', label: 'South Boundary Wall (12.0m)', x: 180, y: 620, width: 780, height: 18, color: '#334155', wallHatch: 'concrete' },
+        { id: 'w_west', type: 'arch_wall', label: 'West Wall (7.5m)', x: 180, y: 118, width: 18, height: 502, color: '#334155', wallHatch: 'concrete' },
+        { id: 'w_east', type: 'arch_wall', label: 'East Wall (7.5m)', x: 942, y: 118, width: 18, height: 502, color: '#334155', wallHatch: 'concrete' },
+        { id: 'w_div_1', type: 'arch_wall', label: 'Conference Glass Wall', x: 540, y: 118, width: 14, height: 320, color: '#475569' },
+        { id: 'w_div_2', type: 'arch_wall', label: 'Reception Partition', x: 198, y: 440, width: 342, height: 14, color: '#475569' },
+        { id: 'room_open_office', type: 'arch_room', label: 'Open Workstation Bay', x: 564, y: 128, width: 368, height: 302, color: '#3B82F6', roomArea: '32.4 m² (348 sq ft)', sublabel: '16 Ergonomic Desks' },
+        { id: 'room_conf', type: 'arch_room', label: 'Executive Conference Room', x: 208, y: 128, width: 322, height: 302, color: '#6366F1', roomArea: '22.8 m² (245 sq ft)', sublabel: 'Acoustic Wall Paneling' },
+        { id: 'room_reception', type: 'arch_room', label: 'Client Reception & Lounge', x: 208, y: 464, width: 322, height: 146, color: '#0D9488', roomArea: '14.2 m² (152 sq ft)', sublabel: 'Entry Turnstile Zone' },
+        { id: 'room_server', type: 'arch_room', label: 'IT Server / Comm Room', x: 564, y: 464, width: 200, height: 146, color: '#0284C7', roomArea: '8.6 m² (92 sq ft)', sublabel: 'Precision Cooling' },
+        { id: 'door_main', type: 'arch_door', label: 'Double Glass Entry (1800mm)', x: 320, y: 80, width: 90, height: 90, color: '#2563EB' },
+        { id: 'door_conf', type: 'arch_door', label: 'Conf Door (900mm)', x: 510, y: 360, width: 70, height: 70, color: '#2563EB' },
+        { id: 'win_facade', type: 'arch_window', label: 'Curtain Wall Glazing (3000mm)', x: 640, y: 94, width: 140, height: 24, color: '#0284C7' },
+        { id: 'col_1', type: 'arch_column', label: 'C1', x: 165, y: 85, width: 36, height: 36, color: '#0F172A' },
+        { id: 'col_2', type: 'arch_column', label: 'C2', x: 940, y: 85, width: 36, height: 36, color: '#0F172A' },
+        { id: 'col_3', type: 'arch_column', label: 'C3', x: 530, y: 85, width: 36, height: 36, color: '#0F172A' },
+        { id: 'dim_span', type: 'arch_dimension', label: '12.00 m (39\' 4")', x: 180, y: 50, width: 780, height: 35, color: '#3B82F6', dimensionText: 'OVERALL LENGTH: 12.00 m' },
+        { id: 'titleblock', type: 'arch_titleblock', label: 'FLOWLIFY CAD • COMMERCIAL LAYOUT', sublabel: 'DRAWING C-201 • REVISION A', x: 520, y: 660, width: 440, height: 80, color: '#0F172A' },
+      ],
+      edges: [],
+    },
+  },
+  // 9. Modern Studio Apartment & Balcony
+  {
+    id: 'studio-suite-floorplan',
+    title: 'Modern Studio Apartment & Balcony',
+    category: 'Architecture',
+    description: 'Compact urban studio layout with open kitchenette, sleeping alcove, ensuite bath, and cantilevered balcony.',
+    tags: ['Architecture', 'CAD', 'Studio', 'Apartment', 'Blueprint'],
+    thumbnailSvgUrl: createArchitecturalSketchDataUrl('Studio Apartment CAD', [
+      { name: 'Studio Living / Bed', x: 90, y: 120, w: 320, h: 180 },
+      { name: 'Balcony Deck', x: 430, y: 120, w: 180, h: 180 },
+      { name: 'Kitchenette', x: 90, y: 310, w: 200, h: 105 },
+      { name: 'Bathroom', x: 310, y: 310, w: 140, h: 105 },
+    ]),
+    diagram: {
+      title: 'Modern Studio Apartment CAD Blueprint',
+      description: 'Compact 2D architectural studio suite layout',
+      direction: 'top-down',
+      studioMode: 'architecture',
+      gridType: 'blueprint',
+      canvasBg: '#0B1E36',
+      nodes: [
+        { id: 'w_north', type: 'arch_wall', label: 'North Wall (7.0m)', x: 220, y: 120, width: 560, height: 18, color: '#334155', wallHatch: 'concrete' },
+        { id: 'w_south', type: 'arch_wall', label: 'South Wall (7.0m)', x: 220, y: 580, width: 560, height: 18, color: '#334155', wallHatch: 'concrete' },
+        { id: 'w_west', type: 'arch_wall', label: 'West Wall (5.5m)', x: 220, y: 138, width: 18, height: 442, color: '#334155', wallHatch: 'concrete' },
+        { id: 'w_east', type: 'arch_wall', label: 'East Wall (5.5m)', x: 762, y: 138, width: 18, height: 442, color: '#334155', wallHatch: 'concrete' },
+        { id: 'w_bath', type: 'arch_wall', label: 'Bath Partition', x: 520, y: 380, width: 14, height: 200, color: '#475569' },
+        { id: 'room_living', type: 'arch_room', label: 'Studio Suite & Living', x: 248, y: 148, width: 500, height: 220, color: '#3B82F6', roomArea: '22.5 m² (242 sq ft)', sublabel: 'Open Concept' },
+        { id: 'room_kitchen', type: 'arch_room', label: 'Kitchenette Counter', x: 248, y: 390, width: 260, height: 180, color: '#0D9488', roomArea: '7.8 m² (84 sq ft)', sublabel: 'Induction & Sink' },
+        { id: 'room_bath', type: 'arch_room', label: 'Ensuite Bath', x: 544, y: 390, width: 206, height: 180, color: '#6366F1', roomArea: '5.2 m² (56 sq ft)', sublabel: 'Walk-in Shower' },
+        { id: 'door_main', type: 'arch_door', label: 'Studio Entry (900mm)', x: 280, y: 100, width: 75, height: 75, color: '#2563EB' },
+        { id: 'door_bath', type: 'arch_door', label: 'Bath Door (750mm)', x: 500, y: 460, width: 65, height: 65, color: '#2563EB' },
+        { id: 'win_studio', type: 'arch_window', label: 'Balcony Slider (2400mm)', x: 580, y: 114, width: 130, height: 24, color: '#0284C7' },
+        { id: 'col_1', type: 'arch_column', label: 'C1', x: 205, y: 105, width: 34, height: 34, color: '#0F172A' },
+        { id: 'col_2', type: 'arch_column', label: 'C2', x: 760, y: 105, width: 34, height: 34, color: '#0F172A' },
+        { id: 'dim_span', type: 'arch_dimension', label: '7.00 m (23\' 0")', x: 220, y: 65, width: 560, height: 35, color: '#3B82F6', dimensionText: '7.00 m (23\' 0")' },
+        { id: 'furniture_bed', type: 'arch_furniture', label: 'Queen Bed', x: 380, y: 180, width: 130, height: 150, color: '#64748B', furnitureType: 'bed' },
+        { id: 'titleblock', type: 'arch_titleblock', label: 'FLOWLIFY CAD • STUDIO APARTMENT', sublabel: 'DRAWING S-101 • SCALE 1:50', x: 420, y: 620, width: 360, height: 75, color: '#0F172A' },
+      ],
+      edges: [],
+    },
+  },
 ];
+
+export const FLOWCHART_SAMPLES = SAMPLE_DIAGRAMS.filter((s) => s.category !== 'Architecture');
+export const ARCHITECTURAL_SAMPLES = SAMPLE_DIAGRAMS.filter((s) => s.category === 'Architecture');
+

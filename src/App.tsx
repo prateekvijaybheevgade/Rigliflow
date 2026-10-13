@@ -1102,6 +1102,7 @@ function FlowlifyApp() {
           isOpen={isUploadModalOpen}
           onClose={() => setIsUploadModalOpen(false)}
           onSuccess={handleUploadSuccess}
+          initialMode={diagram.studioMode || 'flowchart'}
         />
       </>
     );
@@ -1402,6 +1403,7 @@ function FlowlifyApp() {
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onSuccess={handleUploadSuccess}
+        initialMode={diagram.studioMode || 'flowchart'}
       />
 
       {/* AI Assistant Modal for prompt generation & refinement */}

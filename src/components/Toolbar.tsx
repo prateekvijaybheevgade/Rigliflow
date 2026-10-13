@@ -383,12 +383,28 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           {/* Upload Image / Sketch */}
           <button
             onClick={onOpenUploadModal}
-            className="flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-md shadow-xs border border-slate-200/90 hover:border-slate-300 transition-all cursor-pointer"
-            title="Upload photo, whiteboard sketch or architecture diagram"
+            className={`flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-800 text-xs font-semibold px-2.5 sm:px-3 py-1.5 rounded-md shadow-xs border transition-all cursor-pointer ${
+              diagram.studioMode === 'architecture'
+                ? 'border-cyan-300 text-cyan-900 hover:border-cyan-400 bg-cyan-50/40'
+                : 'border-slate-200/90 hover:border-slate-300'
+            }`}
+            title={
+              diagram.studioMode === 'architecture'
+                ? 'Scan floor plan sketch, paper blueprint or civil CAD drawing'
+                : 'Upload photo, whiteboard sketch or architecture diagram'
+            }
           >
-            <Upload size={13} className="text-blue-600 stroke-[2.2]" />
-            <span className="hidden sm:inline">Upload Sketch</span>
-            <span className="sm:hidden">Upload</span>
+            {diagram.studioMode === 'architecture' ? (
+              <Compass size={13} className="text-cyan-600 stroke-[2.2]" />
+            ) : (
+              <Upload size={13} className="text-blue-600 stroke-[2.2]" />
+            )}
+            <span className="hidden sm:inline">
+              {diagram.studioMode === 'architecture' ? 'Scan Blueprint' : 'Upload Sketch'}
+            </span>
+            <span className="sm:hidden">
+              {diagram.studioMode === 'architecture' ? 'Scan' : 'Upload'}
+            </span>
           </button>
 
           {/* AI Prompt Architect */}
